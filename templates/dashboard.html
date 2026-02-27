@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header fade-up">
+    <div class="eyebrow"><span class="eyebrow-line"></span>Wellness Dashboard<span class="eyebrow-line"></span></div>
+    <h1>Your <em>Wellbeing</em> Overview</h1>
+    <p>Track your burnout risk, view assessment history, and access support resources.</p>
+</div>
+
+<div class="container fade-up">
+    <div class="grid-sidebar">
+        <!-- LEFT: Profile Card -->
+        <div>
+            <div class="card profile-card">
+                <div class="profile-avatar">
+                    {% if employee.is_hr %}🛡️{% else %}👤{% endif %}
+                </div>
+                <div class="profile-name">{{ employee.name }}</div>
+                <div class="profile-role">{{ employee.role }} · {{ employee.department }}</div>
+
+                <!-- Wellness Ring -->
+                {% set score = burnout.adjusted_score %}
+                {% set wellness = 100 - score %}
+                {% set circ = 326.7 %}
+                {% set offset = circ - (wellness / 100) * circ %}
+                {% if score == 0 and not burnout.last_assessment_date %}
+                {% set ring_color = "var(--muted2)" %}
+                {% elif wellness >= 70 %}
+                {% set ring_color = "var(--green)" %}
+                {% elif wellness >= 40 %}
+                {% set ring_color = "var(--amber)" %}
+                {% else %}
+                {% set ring_color = "var(--red)" %}
+                {% endif %}
+
+                <div class="wellness-ring">
+                    <svg viewBox="0 0 120 120">
+                        <circle class="bg" cx="60" cy="60" r="52" />
+                        <circle class="fill" cx="60" cy="60" r="52" stroke="{{ ring_color }}"
+                            stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}" />
+                    </svg>
+                    <div class="label">
+                        {% if burnout.last_assessment_date %}
+                        <span class="val" style="color:{{ ring_color }}">{{ wellness|round|int }}%</span>
+                        <span class="sub">Wellness</span>
+                        {% else %}
+                        <span class="val" style="color:var(--muted2)">—</span>
+                        <span class="sub">No test yet</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="profile-stat">
+                    <span>Burnout Score</span>
+                    <span
+                        class="{% if score >= 65 %}text-red{% elif score >= 35 %}text-amber{% else %}text-green{% endif %}">
+                        {{ score }}%
+                    </span>
+                </div>
+                <div class="profile-stat">
+                    <span>Risk Level</span>
+                    <span>
+                        {% if burnout.risk_level == 'low' %}
+                        <span class="badge badge-green">Low</span>
+                        {% elif burnout.risk_level == 'moderate' %}
+                        <span class="badge badge-amber">Moderate</span>
+                        {% elif burnout.risk_level == 'high' %}
+                        <span class="badge badge-red">High</span>
+                        {% elif burnout.risk_level == 'critical' %}
+                        <span class="badge badge-red">Critical</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="profile-stat">
+                    <span>Last Assessment</span>
+                    <span>{{ burnout.last_assessment_date or 'Not yet' }}</span>
+                </div>
+                <div class="profile-stat">
+                    <span>Total Assessments</span>
+                    <span>{{ assessments|length }}</span>
+                </div>
+            </div>
+
+            <!-- Take Assessment CTA -->
+            <div class="book-card">
+                <h4>📝 Take Your Assessment</h4>
+                <p>Complete a quick wellbeing check to update your burnout score.</p>
+                <a href="{{ url_for('assessment') }}" class="btn btn-sm">Start Assessment →</a>
+            </div>
+        </div>
+
+        <!-- RIGHT: KPIs + Breakdown -->
+        <div>
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi {% if score < 35 %}green{% elif score < 65 %}amber{% else %}red{% endif %}">
+                    <div class="kpi-label">Burnout Score</div>
+                    <div class="kpi-val">{{ score }}%</div>
+                    <div class="kpi-sub">
+                        {% if not burnout.last_assessment_date %}Pending assessment{% else %}Latest reading{% endif %}
+                    </div>
+                </div>
+                <div
+                    class="kpi {% if burnout.risk_level in ['high', 'critical'] %}red{% elif burnout.risk_level == 'moderate' %}amber{% else %}green{% endif %}">
+                    <div class="kpi-label">Risk Level</div>
+                    <div class="kpi-val">{{ burnout.risk_level|capitalize }}</div>
+                    <div class="kpi-sub">Based on composite analysis</div>
+                </div>
+                <div class="kpi blue">
+                    <div class="kpi-label">Assessments</div>
+                    <div class="kpi-val">{{ assessments|length }}</div>
+                    <div class="kpi-sub">Total completed</div>
+                </div>
+            </div>
+
+            <!-- Score Breakdown -->
+            {% if burnout.last_assessment_date %}
+            <div class="card">
+                <div class="card-header">Score Breakdown</div>
+                {% set bd = burnout.breakdown %}
+
+                {% for key, data in bd.items() %}
+                {% set s = data.score %}
+                {% if s <= 25 %}{% set color="var(--green)" %}{% set tag="Low" %} {% elif s <=50 %}{% set
+                    color="var(--blue)" %}{% set tag="Moderate" %} {% elif s <=75 %}{% set color="var(--amber)" %}{% set
+                    tag="Elevated" %} {% else %}{% set color="var(--red)" %}{% set tag="High" %}{% endif %} <div
+                    class="meter">
+                    <div class="meter-head">
+                        <span class="meter-icon">
+                            {% if key == 'assessment' %}📝{% elif key == 'sentiment' %}💬{% elif key == 'work_pattern'
+                            %}⏰{% else %}📈{% endif %}
+                        </span>
+                        <span class="meter-label">{{ key|replace('_', ' ')|title }}</span>
+                        <span class="meter-pct" style="color:{{ color }}">{{ s|round|int }}%</span>
+                        <span class="meter-tag"
+                            style="background:{{ color }}15;color:{{ color }};border-color:{{ color }}30">{{ tag
+                            }}</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill" style="width:{{ s }}%;background:{{ color }}"></div>
+                    </div>
+            </div>
+            {% endfor %}
+
+            <div class="info-strip mt-2">
+                <strong>How it works:</strong> Your burnout score combines your assessment answers ({{
+                (bd.assessment.weight * 100)|int }}%), communication sentiment ({{ (bd.sentiment.weight * 100)|int }}%),
+                work patterns ({{ (bd.work_pattern.weight * 100)|int }}%), and productivity metrics ({{
+                (bd.productivity.weight * 100)|int }}%).
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                <div class="icon">📋</div>
+                <p>Take your first assessment to see your detailed score breakdown.</p>
+                <a href="{{ url_for('assessment') }}" class="btn btn-sm">Take Assessment →</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Assessment History -->
+        {% if assessments %}
+        <div class="card mt-2">
+            <div class="card-header">Assessment History</div>
+            {% for a in assessments|reverse %}
+            {% set a_score = a._computed_score if a._computed_score is defined else '—' %}
+            <div class="history-item">
+                <span class="history-date">{{ a.timestamp }}</span>
+                <span>
+                    {% if burnout.assessment_trend %}
+                    {% set trend_item = burnout.assessment_trend[loop.revindex0] if loop.revindex0 <
+                        burnout.assessment_trend|length else none %} {% if trend_item %} {% set ts=trend_item.score %}
+                        {% if ts < 35 %}<span class="badge badge-green">Low</span>
+                {% elif ts < 65 %}<span class="badge badge-amber">Moderate</span>
+                    {% else %}<span class="badge badge-red">High</span>{% endif %}
+                    {% endif %}
+                    {% endif %}
+                    </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Peer Report CTA -->
+        <div class="card mt-2" style="border-left:3px solid var(--blue)">
+            <div class="card-header">📩 Worried About a Colleague?</div>
+            <p style="font-size:.86rem;color:var(--muted);margin-bottom:1rem">
+                If you notice signs of burnout in a co-worker, you can submit a confidential peer concern report.
+            </p>
+            <a href="{{ url_for('peer_report') }}" class="btn btn-outline btn-sm">Submit Peer Report →</a>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

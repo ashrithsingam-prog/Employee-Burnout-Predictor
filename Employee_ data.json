@@ -24,14 +24,14 @@ ROLES = {
 }
 
 FIRST_NAMES = [
-    "Ashrith", "Amogh", "Diddy", "Sneha", "Vikram", "Ananya", "Rohan", "Kavya",
+    "Ashrith", "", "Rahul", "Sneha", "Vikram", "Ananya", "Rohan", "Kavya",
     "Arjun", "Meera", "Aditya", "Ishita", "Karan", "Pooja", "Nikhil", "Divya",
     "Siddharth", "Nisha", "Amit", "Riya"
 ]
 
 LAST_NAMES = [
     "Sharma", "Patel", "Verma", "Kumar", "Singh", "Gupta", "Reddy", "Nair",
-    "Joshi", "Mehta", "Chopra", "Sarvak", "Bhat", "Iyer", "Rao", "Das",
+    "Joshi", "Mehta", "Chopra", "Malhotra", "Bhat", "Iyer", "Rao", "Das",
     "Chauhan", "Pillai", "Banerjee", "Kulkarni"
 ]
 

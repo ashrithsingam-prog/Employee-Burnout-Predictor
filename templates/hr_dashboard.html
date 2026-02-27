@@ -57,6 +57,78 @@
     </div>
 </div>
 
+<!-- Manager Blindspot Alerts -->
+{% if manager_blindspots %}
+<div class="card" style="margin-bottom:1.5rem; border-left:3px solid var(--purple)">
+    <div class="card-header" style="color:var(--purple)">🔍 Manager Blindspot Analysis
+        <span class="badge badge-purple" style="margin-left:.5rem;font-size:.6rem">SYSTEMIC RISK</span>
+    </div>
+    <div style="font-size:.78rem;color:var(--muted2);margin-bottom:1rem;line-height:1.5">
+        Teams are grouped by their assigned manager. High average burnout scores may indicate systemic leadership issues
+        rather than individual problems.
+    </div>
+
+    {% for mgr in manager_blindspots %}
+    <div style="padding:.8rem 1rem;margin-bottom:.6rem;background:var(--surface2);border-radius:10px;
+        {% if mgr.risk == 'critical' %}border-left:3px solid var(--red)
+        {% elif mgr.risk == 'high' %}border-left:3px solid var(--red)
+        {% elif mgr.risk == 'moderate' %}border-left:3px solid var(--amber)
+        {% else %}border-left:3px solid var(--green){% endif %}">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+            <div>
+                <span style="font-weight:700;font-size:.88rem;color:var(--text-main)">{{ mgr.manager_id }}</span>
+                <span style="font-size:.72rem;color:var(--muted);margin-left:.5rem">{{ mgr.team_size }} team
+                    members</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:.5rem">
+                {% if mgr.high_risk_count > 0 %}
+                <span class="badge badge-red" style="font-size:.6rem">{{ mgr.high_risk_count }} at risk</span>
+                {% endif %}
+                <span style="font-size:1rem;font-weight:800;
+                    {% if mgr.avg_score >= 50 %}color:var(--red)
+                    {% elif mgr.avg_score >= 30 %}color:var(--amber)
+                    {% else %}color:var(--green){% endif %}">{{ mgr.avg_score }}%</span>
+            </div>
+        </div>
+
+        <!-- Score bar -->
+        <div style="width:100%;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:.5rem">
+            <div style="width:{{ mgr.avg_score }}%;height:100%;border-radius:3px;
+                {% if mgr.avg_score >= 50 %}background:var(--red)
+                {% elif mgr.avg_score >= 30 %}background:var(--amber)
+                {% else %}background:var(--green){% endif %}"></div>
+        </div>
+
+        <!-- Team members (collapsed by default) -->
+        <details style="margin-top:.3rem">
+            <summary style="font-size:.72rem;color:var(--accent);cursor:pointer;font-weight:600">View team members
+            </summary>
+            <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.4rem">
+                {% for member in mgr.members %}
+                <a href="{{ url_for('hr_employee_detail', emp_id=member.id) }}"
+                    style="display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .6rem;background:var(--bg);border-radius:6px;font-size:.7rem;text-decoration:none;color:var(--text-main);border:1px solid var(--border)">
+                    <span style="font-weight:600">{{ member.name }}</span>
+                    <span
+                        class="badge badge-{% if member.risk_level == 'low' %}green{% elif member.risk_level == 'moderate' %}amber{% else %}red{% endif %}"
+                        style="font-size:.55rem;padding:1px 5px">{{ member.score }}%</span>
+                </a>
+                {% endfor %}
+            </div>
+        </details>
+
+        {% if mgr.avg_score >= 50 %}
+        <div
+            style="margin-top:.6rem;padding:.5rem .7rem;background:rgba(239,68,68,.06);border-radius:6px;font-size:.7rem;color:var(--red);line-height:1.4;border:1px solid rgba(239,68,68,.15)">
+            ⚠️ <strong>Action Recommended:</strong> This manager's team has an abnormally high average burnout score.
+            Consider scheduling a leadership review, workload audit, or team 1-on-1s.
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <!-- Search & Filter -->
 <div class="card">
     <div class="card-header">👥 Employee Database</div>

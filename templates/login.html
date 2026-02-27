@@ -34,7 +34,26 @@
     <div class="login-right">
         <div class="login-form">
             <h2 style="margin-bottom:.4rem">Welcome Back</h2>
-            <p style="margin-bottom:2rem">Enter your employee ID to access the platform</p>
+            <p id="login-subtitle" style="margin-bottom:1.5rem">Enter your ID to access the platform</p>
+
+            <!-- Toggle Buttons -->
+            <div style="display:flex;gap:.4rem;margin-bottom:1.8rem">
+                <button type="button" id="btn-emp" onclick="switchMode('employee')" style="flex:1;padding:.65rem .6rem;border-radius:10px;font-size:.78rem;font-weight:600;cursor:pointer;
+                    border:2px solid var(--accent);background:var(--accent);color:#fff;
+                    transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:.3rem">
+                    👤 Employee
+                </button>
+                <button type="button" id="btn-mgr" onclick="switchMode('manager')" style="flex:1;padding:.65rem .6rem;border-radius:10px;font-size:.78rem;font-weight:600;cursor:pointer;
+                    border:2px solid var(--border);background:var(--surface2);color:var(--text-main);
+                    transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:.3rem">
+                    � Manager
+                </button>
+                <button type="button" id="btn-hr" onclick="switchMode('hr')" style="flex:1;padding:.65rem .6rem;border-radius:10px;font-size:.78rem;font-weight:600;cursor:pointer;
+                    border:2px solid var(--border);background:var(--surface2);color:var(--text-main);
+                    transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:.3rem">
+                    🛡️ HR
+                </button>
+            </div>
 
             {% if error %}
             <div class="form-error">{{ error }}</div>
@@ -42,18 +61,69 @@
 
             <form method="POST" action="{{ url_for('login') }}">
                 <div class="form-group">
-                    <label for="emp_id">Employee ID</label>
+                    <label for="emp_id" id="login-label">Employee ID</label>
                     <input type="text" id="emp_id" name="emp_id" placeholder="e.g. EMP001" required autocomplete="off"
                         autofocus style="margin-bottom:0">
                 </div>
-                <button type="submit" class="btn btn-block" style="margin-top:1.2rem">Sign In →</button>
+                <button type="submit" class="btn btn-block" id="login-btn" style="margin-top:1.2rem">Sign In as Employee
+                    →</button>
             </form>
 
-            <div class="login-hint">
-                Employees: <strong>EMP001 – EMP015</strong> &nbsp;·&nbsp;
-                HR Managers: <strong>EMP016 – EMP020</strong>
+            <div class="login-hint" id="login-hint">
+                Use IDs: <strong>EMP001 – EMP015</strong>
             </div>
         </div>
     </div>
+
+    <script>
+        function switchMode(mode) {
+            const btnEmp = document.getElementById('btn-emp');
+            const btnMgr = document.getElementById('btn-mgr');
+            const btnHr = document.getElementById('btn-hr');
+            const label = document.getElementById('login-label');
+            const input = document.getElementById('emp_id');
+            const hint = document.getElementById('login-hint');
+            const subtitle = document.getElementById('login-subtitle');
+            const loginBtn = document.getElementById('login-btn');
+
+            // Reset all buttons to inactive
+            [btnEmp, btnMgr, btnHr].forEach(btn => {
+                btn.style.background = 'var(--surface2)';
+                btn.style.color = 'var(--text-main)';
+                btn.style.borderColor = 'var(--border)';
+            });
+
+            if (mode === 'hr') {
+                btnHr.style.background = 'var(--accent)';
+                btnHr.style.color = '#fff';
+                btnHr.style.borderColor = 'var(--accent)';
+                label.textContent = 'HR ID';
+                input.placeholder = 'e.g. HR001';
+                hint.innerHTML = 'Use IDs: <strong>HR001 – HR005</strong>';
+                subtitle.textContent = 'Enter your HR ID to access the management dashboard';
+                loginBtn.textContent = 'Sign In as HR →';
+            } else if (mode === 'manager') {
+                btnMgr.style.background = 'var(--accent)';
+                btnMgr.style.color = '#fff';
+                btnMgr.style.borderColor = 'var(--accent)';
+                label.textContent = 'Manager ID';
+                input.placeholder = 'e.g. MGR001';
+                hint.innerHTML = 'Use IDs: <strong>MGR001 – MGR005</strong>';
+                subtitle.textContent = 'Enter your Manager ID to access your dashboard';
+                loginBtn.textContent = 'Sign In as Manager →';
+            } else {
+                btnEmp.style.background = 'var(--accent)';
+                btnEmp.style.color = '#fff';
+                btnEmp.style.borderColor = 'var(--accent)';
+                label.textContent = 'Employee ID';
+                input.placeholder = 'e.g. EMP001';
+                hint.innerHTML = 'Use IDs: <strong>EMP001 – EMP015</strong>';
+                subtitle.textContent = 'Enter your ID to access the platform';
+                loginBtn.textContent = 'Sign In as Employee →';
+            }
+            input.value = '';
+            input.focus();
+        }
+    </script>
 </div>
 {% endblock %}

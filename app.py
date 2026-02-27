@@ -150,6 +150,7 @@ def login():
         # Store in session
         session["emp_id"] = emp_id
         session["is_hr"] = employee.get("is_hr", False)
+        session["is_manager"] = employee.get("is_manager", False)
         DATA["sessions"][emp_id] = datetime.now().isoformat()
 
         if employee.get("is_hr"):
@@ -181,6 +182,20 @@ def dashboard():
     work_logs = DATA["work_logs"].get(emp_id, [])[-4:]  # Last 4 weeks
     hr_actions = DATA["hr_actions"].get(emp_id, [])  # HR actions for this employee
 
+    # If logged-in user is a manager, gather HR actions for their team
+    team_actions = []
+    if employee.get("is_manager"):
+        for eid, emp_data in DATA["employees"].items():
+            if emp_data.get("manager") == emp_id and eid != emp_id:
+                actions = DATA["hr_actions"].get(eid, [])
+                for action in actions:
+                    team_actions.append({
+                        "employee_name": emp_data["name"],
+                        "employee_id": eid,
+                        "action": action,
+                    })
+        team_actions.sort(key=lambda x: x["action"].get("timestamp", ""), reverse=True)
+
     return render_template(
         "dashboard.html",
         employee=employee,
@@ -188,6 +203,7 @@ def dashboard():
         assessments=assessments,
         work_logs=work_logs,
         hr_actions=hr_actions,
+        team_actions=team_actions,
         active_page="dashboard",
     )
 
@@ -384,6 +400,48 @@ def hr_dashboard():
     # Get peer reports
     peer_reports = sorted(DATA["peer_reports"], key=lambda x: x["timestamp"], reverse=True)
 
+    # ── Manager Blindspot Analysis ──────────────────────────────────────
+    manager_teams = {}  # manager_id -> list of {name, score, risk_level}
+    for emp in DATA["employees"].values():
+        if emp.get("is_hr"):
+            continue  # Skip HR managers themselves
+        mgr_id = emp.get("manager", "Unknown")
+        if mgr_id not in manager_teams:
+            manager_teams[mgr_id] = {"members": [], "total_score": 0}
+        burnout = get_employee_burnout(emp["id"])
+        score = burnout["adjusted_score"]
+        manager_teams[mgr_id]["members"].append({
+            "name": emp["name"],
+            "id": emp["id"],
+            "score": score,
+            "risk_level": burnout["risk_level"],
+        })
+        manager_teams[mgr_id]["total_score"] += score
+
+    # Build sorted list of manager summaries
+    manager_blindspots = []
+    for mgr_id, data in manager_teams.items():
+        count = len(data["members"])
+        avg = round(data["total_score"] / count, 1) if count > 0 else 0
+        high_risk_count = sum(1 for m in data["members"] if m["risk_level"] in ("high", "critical"))
+        if avg >= 70:
+            risk = "critical"
+        elif avg >= 50:
+            risk = "high"
+        elif avg >= 30:
+            risk = "moderate"
+        else:
+            risk = "low"
+        manager_blindspots.append({
+            "manager_id": mgr_id,
+            "team_size": count,
+            "avg_score": avg,
+            "high_risk_count": high_risk_count,
+            "risk": risk,
+            "members": sorted(data["members"], key=lambda x: x["score"], reverse=True),
+        })
+    manager_blindspots.sort(key=lambda x: x["avg_score"], reverse=True)
+
     return render_template(
         "hr_dashboard.html",
         employees=employees,
@@ -392,6 +450,7 @@ def hr_dashboard():
         at_risk=at_risk,
         risk_dist=risk_dist,
         peer_reports=peer_reports,
+        manager_blindspots=manager_blindspots,
         search_query=search_query,
         risk_filter=risk_filter,
         active_page="hr",

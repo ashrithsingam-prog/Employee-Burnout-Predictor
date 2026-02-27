@@ -78,6 +78,57 @@
 </div>
 {% endif %}
 
+<!-- Team HR Actions (Managers only) -->
+{% if employee.is_manager and team_actions %}
+<div class="card"
+    style="border-left:3px solid var(--blue);background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(59,130,246,.02));margin-bottom:1.5rem">
+    <div class="card-header" style="color:var(--blue)">👔 Team Updates From HR
+        <span class="badge badge-blue" style="margin-left:.5rem">{{ team_actions|length }} action{{ 's' if
+            team_actions|length > 1 }}</span>
+    </div>
+    <p style="font-size:.78rem;margin-bottom:1rem;color:var(--muted2)">HR has taken the following actions for members of
+        your team. These are provided for your awareness so you can support your team.</p>
+    {% for item in team_actions[:8] %}
+    <div
+        style="display:flex;align-items:flex-start;gap:.7rem;padding:.8rem 1rem;margin-bottom:.5rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+        <div style="flex-shrink:0;font-size:1.3rem">
+            {% if item.action.action_type == 'schedule_1on1' %}📅
+            {% elif item.action.action_type == 'grant_leave' %}🌜
+            {% elif item.action.action_type == 'reduce_workload' %}📈
+            {% elif item.action.action_type == 'counseling_referral' %}💚
+            {% elif item.action.action_type == 'task_redistribution' %}📁
+            {% else %}✨{% endif %}
+        </div>
+        <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:.82rem;color:var(--ink);margin-bottom:.2rem">
+                {{ item.employee_name }}
+                <span style="font-size:.68rem;color:var(--muted);font-weight:400;margin-left:.3rem">{{ item.employee_id
+                    }}</span>
+            </div>
+            <div style="font-size:.78rem;color:var(--ink2);margin-bottom:.2rem">
+                {{ item.action.action_type|replace('_', ' ')|title }} — {{ item.action.details }}
+            </div>
+            <div style="font-size:.68rem;color:var(--muted)">
+                {{ item.action.timestamp }} ·
+                <span class="badge badge-green" style="font-size:.58rem">{{ item.action.status }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    <div
+        style="margin-top:.8rem;padding:.6rem .8rem;background:rgba(59,130,246,.08);border-radius:8px;font-size:.75rem;color:var(--blue)">
+        💡 <strong>Your role:</strong> These actions are confidential. Please be supportive if your team members need
+        schedule adjustments or time off.
+    </div>
+</div>
+{% elif employee.is_manager and not team_actions %}
+<div class="card" style="border-left:3px solid var(--blue);margin-bottom:1.5rem">
+    <div class="card-header" style="color:var(--blue)">👔 Team Updates From HR</div>
+    <p style="font-size:.82rem;color:var(--muted2);padding:.5rem 0">No HR actions have been taken for your team members
+        yet. This section will update when HR takes action.</p>
+</div>
+{% endif %}
+
 <div class="grid-sidebar">
     <!-- LEFT: Profile -->
     <div class="card profile-card">

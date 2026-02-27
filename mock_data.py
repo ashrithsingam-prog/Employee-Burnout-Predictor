@@ -181,30 +181,27 @@ ASSESSMENT_QUESTIONS = [
 # Data Generation Functions
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_employee_id(index):
-    """Generate a realistic employee ID like EMP001."""
-    return f"EMP{str(index).zfill(3)}"
-
-
-def generate_employees(count=20):
+def generate_employees(count=25):
     """Generate a list of mock employees with varied burnout profiles.
-    EMP001-015 = Regular Employees, EMP016-020 = HR Managers.
+    EMP001-015 = Regular Employees, MGR001-005 = Managers, HR001-005 = HR.
     """
     employees = []
     used_names = set()
 
     HR_ROLES_LIST = ["HR Manager", "Senior HR Manager", "HR Director", "HR Business Partner", "Chief People Officer"]
+    MGR_ROLES_LIST = ["Engineering Manager", "Product Manager", "Design Lead", "Operations Manager", "Team Lead"]
+    MGR_DEPTS = ["Engineering", "Product", "Design", "Operations", "Engineering"]
 
-    # Assign burnout profiles: ~30% healthy, ~40% at-risk, ~30% burnout
+    # Assign burnout profiles for all 25 people
     profiles = (
-        ["healthy"] * max(1, int(count * 0.3))
-        + ["at_risk"] * max(1, int(count * 0.4))
-        + ["burnout"] * max(1, int(count * 0.3))
+        ["healthy"] * 8
+        + ["at_risk"] * 10
+        + ["burnout"] * 7
     )
     random.shuffle(profiles)
 
-    for i in range(1, count + 1):
-        # Pick unique name
+    # ── Generate 15 regular employees (EMP001-015) ──
+    for i in range(1, 16):
         while True:
             first = random.choice(FIRST_NAMES)
             last = random.choice(LAST_NAMES)
@@ -213,27 +210,75 @@ def generate_employees(count=20):
                 used_names.add(full_name)
                 break
 
-        is_hr = i >= 16  # EMP016-020 are HR managers
-
-        if is_hr:
-            dept = "HR"
-            role = HR_ROLES_LIST[(i - 16) % len(HR_ROLES_LIST)]
-        else:
-            dept = random.choice([d for d in DEPARTMENTS if d != "HR"])
-            role = random.choice(ROLES.get(dept, ["Employee"]))
-
-        profile = profiles[i - 1] if i - 1 < len(profiles) else random.choice(profiles)
+        dept = random.choice([d for d in DEPARTMENTS if d != "HR"])
+        role = random.choice(ROLES.get(dept, ["Employee"]))
+        profile = profiles[i - 1] if i - 1 < len(profiles) else "healthy"
 
         emp = {
-            "id": generate_employee_id(i),
+            "id": f"EMP{str(i).zfill(3)}",
             "name": full_name,
             "email": f"{first.lower()}.{last.lower()}@company.com",
             "department": dept,
             "role": role,
-            "is_hr": is_hr,
-            "profile": profile,  # hidden from frontend — used for data generation
+            "is_hr": False,
+            "is_manager": False,
+            "profile": profile,
             "join_date": (datetime.now() - timedelta(days=random.randint(180, 1800))).strftime("%Y-%m-%d"),
             "manager": f"MGR{str(random.randint(1, 5)).zfill(3)}",
+        }
+        employees.append(emp)
+
+    # ── Generate 5 managers (MGR001-005) ──
+    for i in range(1, 6):
+        while True:
+            first = random.choice(FIRST_NAMES)
+            last = random.choice(LAST_NAMES)
+            full_name = f"{first} {last}"
+            if full_name not in used_names:
+                used_names.add(full_name)
+                break
+
+        idx = i - 1
+        profile = profiles[15 + idx] if 15 + idx < len(profiles) else "healthy"
+
+        emp = {
+            "id": f"MGR{str(i).zfill(3)}",
+            "name": full_name,
+            "email": f"{first.lower()}.{last.lower()}@company.com",
+            "department": MGR_DEPTS[idx % len(MGR_DEPTS)],
+            "role": MGR_ROLES_LIST[idx % len(MGR_ROLES_LIST)],
+            "is_hr": False,
+            "is_manager": True,
+            "profile": profile,
+            "join_date": (datetime.now() - timedelta(days=random.randint(365, 2500))).strftime("%Y-%m-%d"),
+            "manager": "EXEC001",  # Managers report to exec
+        }
+        employees.append(emp)
+
+    # ── Generate 5 HR reps (HR001-005) ──
+    for i in range(1, 6):
+        while True:
+            first = random.choice(FIRST_NAMES)
+            last = random.choice(LAST_NAMES)
+            full_name = f"{first} {last}"
+            if full_name not in used_names:
+                used_names.add(full_name)
+                break
+
+        idx = i - 1
+        profile = profiles[20 + idx] if 20 + idx < len(profiles) else "healthy"
+
+        emp = {
+            "id": f"HR{str(i).zfill(3)}",
+            "name": full_name,
+            "email": f"{first.lower()}.{last.lower()}@company.com",
+            "department": "HR",
+            "role": HR_ROLES_LIST[idx % len(HR_ROLES_LIST)],
+            "is_hr": True,
+            "is_manager": False,
+            "profile": profile,
+            "join_date": (datetime.now() - timedelta(days=random.randint(365, 2500))).strftime("%Y-%m-%d"),
+            "manager": "EXEC001",
         }
         employees.append(emp)
 

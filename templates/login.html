@@ -1,25 +1,40 @@
 {% extends "base.html" %}
-{% block title %}Sign In{% endblock %}
+{% block title %}Sign In — BurnShield{% endblock %}
 
-{% block content %}
+{% block fullpage %}
 <div class="login-page">
+
+    <!-- LEFT — Hero -->
     <div class="login-left">
-        <div class="section-label">Employee Wellbeing</div>
-        <h2 style="margin-bottom:1rem">Burn<em style="color:var(--green)">Shield</em></h2>
-        <p style="color:var(--muted);font-size:.95rem;max-width:380px;margin-bottom:2rem">
-            A private, data-driven approach to identifying and supporting early signs of workplace stress &amp; burnout.
-        </p>
-        <div class="login-features">
-            <div class="login-feature"><span>🔒</span> End-to-end privacy by design</div>
-            <div class="login-feature"><span>🧠</span> Identifies patterns, not labels</div>
-            <div class="login-feature"><span>🤝</span> 100% voluntary participation</div>
-            <div class="login-feature"><span>📊</span> Never linked to performance reviews</div>
-            <div class="login-feature"><span>🛡️</span> HR insight without surveillance</div>
+        <div style="position:relative;z-index:1">
+            <div class="sidebar-brand" style="border:none;padding:0;margin-bottom:2.5rem">
+                <div class="brand-icon">🛡</div>
+                <div>
+                    <div class="brand-text">BurnShield</div>
+                    <div class="brand-sub">Wellness Platform</div>
+                </div>
+            </div>
+
+            <h1 style="font-size:2.4rem;max-width:320px">Protect Your Team's <em>Wellbeing</em></h1>
+            <p style="margin-top:1rem;max-width:380px;font-size:.95rem">
+                Data-driven burnout prediction and monitoring.
+                Track stress levels, identify risks early, and take meaningful action.
+            </p>
+
+            <div class="login-features">
+                <div class="login-feature"><span>📊</span> Real-time burnout risk scoring</div>
+                <div class="login-feature"><span>💬</span> Communication sentiment analysis</div>
+                <div class="login-feature"><span>🔍</span> Anti-faking detection system</div>
+                <div class="login-feature"><span>📩</span> Anonymous peer concern reporting</div>
+            </div>
         </div>
     </div>
+
+    <!-- RIGHT — Login Form -->
     <div class="login-right">
         <div class="login-form">
-            <div class="section-label" style="margin-bottom:1.5rem">Sign In</div>
+            <h2 style="margin-bottom:.4rem">Welcome Back</h2>
+            <p style="margin-bottom:2rem">Enter your employee ID to access the platform</p>
 
             {% if error %}
             <div class="form-error">{{ error }}</div>
@@ -28,25 +43,15 @@
             <form method="POST" action="{{ url_for('login') }}">
                 <div class="form-group">
                     <label for="emp_id">Employee ID</label>
-                    <input type="text" id="emp_id" name="emp_id" placeholder="e.g. EMP001" autocomplete="off"
-                        spellcheck="false" autofocus style="text-transform:uppercase">
+                    <input type="text" id="emp_id" name="emp_id" placeholder="e.g. EMP001" required autocomplete="off"
+                        autofocus style="margin-bottom:0">
                 </div>
-                <button type="submit" class="btn btn-block" style="margin-top:.5rem">
-                    Sign In →
-                </button>
+                <button type="submit" class="btn btn-block" style="margin-top:1.2rem">Sign In →</button>
             </form>
 
-            <p class="login-hint">
-                Employees: EMP001 – EMP015 &nbsp;|&nbsp; HR Managers: EMP016 – EMP020
-            </p>
-
-            <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border)">
-                <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center">
-                    <span class="pill">Privacy-First</span>
-                    <span class="pill">Voluntary</span>
-                    <span class="pill">No Surveillance</span>
-                    <span class="pill">Support-Only</span>
-                </div>
+            <div class="login-hint">
+                Employees: <strong>EMP001 – EMP015</strong> &nbsp;·&nbsp;
+                HR Managers: <strong>EMP016 – EMP020</strong>
             </div>
         </div>
     </div>

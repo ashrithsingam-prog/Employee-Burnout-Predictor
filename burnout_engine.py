@@ -15,10 +15,10 @@ from mock_data import ASSESSMENT_QUESTIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
 WEIGHTS = {
-    "assessment": 0.75,   # Latest test answers carry the most weight
-    "sentiment": 0.10,    # Communication tone (supporting signal)
-    "work_pattern": 0.10, # Work hours/patterns (supporting signal)
-    "productivity": 0.05, # Task completion trends (minor signal)
+    "assessment": 0.40,   # Self-reported burnout test
+    "sentiment": 0.20,    # Communication tone analysis
+    "work_pattern": 0.30, # Work hours, weekend work, late nights
+    "productivity": 0.10, # Task completion trends
 }
 
 # Thresholds
@@ -142,17 +142,27 @@ def compute_assessment_score(answers):
     
     Burnout-indicating categories (exhaustion, detachment, physical)
     are weighted 3x more than positive categories (accomplishment, support).
+    Also checks for 'attention_check' questions to flag faking.
     """
     if not answers:
-        return 0  # No assessment taken yet = 0 burnout
+        return 0, False  # Return score, failed_attention_check flag
 
     weighted_total = 0
     total_weight = 0
+    failed_attention_check = False
 
     for q in ASSESSMENT_QUESTIONS:
         qid = q["id"]
         if qid in answers:
             score = answers[qid]
+            
+            # 1. Handle Attention Checks (Trick Questions)
+            if q.get("category") == "attention_check":
+                if score != q.get("expected"):
+                    failed_attention_check = True
+                continue # Do not add trick questions to the math score
+
+            # 2. Handle Normal Scoring (Weighted)
             # Reverse score for positive categories
             if q["category"] in ("personal_accomplishment", "support"):
                 score = 6 - score  # invert: 5→1, 1→5
@@ -164,12 +174,12 @@ def compute_assessment_score(answers):
             total_weight += weight
 
     if total_weight == 0:
-        return 0
+        return 0, failed_attention_check
 
     # Normalize to 0-100
     raw = weighted_total / total_weight  # 1 to 5
     normalized = ((raw - 1) / 4) * 100  # 0 to 100
-    return round(normalized, 1)
+    return round(normalized, 1), failed_attention_check
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -288,7 +298,7 @@ def compute_sentiment_score(sentiment_analysis):
 # Anti-Faking Detection
 # ─────────────────────────────────────────────────────────────────────────────
 
-def detect_faking(assessment, work_logs, sentiment_analysis):
+def detect_faking(assessment, work_logs, sentiment_analysis, assessment_score, failed_attention_check):
     """Detect if an employee is trying to fake their burnout assessment.
     
     Returns a dict with:
@@ -305,7 +315,12 @@ def detect_faking(assessment, work_logs, sentiment_analysis):
     answers = assessment.get("answers", {})
     response_times = assessment.get("response_times", {})
 
-    # 1. Check response time consistency (suspiciously fast = faking)
+    # 1. IMMEDIATE FLAG: Failed Attention Check
+    if failed_attention_check:
+        reasons.append("Failed Attention Check — Responses indicate speed-clicking or not reading questions.")
+        suspicion_score += 0.85
+
+    # 2. Check response time consistency (suspiciously fast = faking)
     if response_times:
         times = list(response_times.values())
         avg_time = sum(times) / len(times)
@@ -320,8 +335,7 @@ def detect_faking(assessment, work_logs, sentiment_analysis):
                 reasons.append("Very uniform response times suggest non-genuine answers")
                 suspicion_score += 0.2
 
-    # 2. Self-report vs work data gap
-    assessment_score = compute_assessment_score(answers)
+    # 3. Self-report vs work data gap
     if work_logs:
         work_score = compute_work_pattern_score(work_logs)
         gap = abs(work_score - assessment_score)
@@ -331,7 +345,7 @@ def detect_faking(assessment, work_logs, sentiment_analysis):
             )
             suspicion_score += 0.3
 
-    # 3. Sentiment vs self-report gap
+    # 4. Sentiment vs self-report gap
     if sentiment_analysis and sentiment_analysis.get("messages"):
         sentiment_score = compute_sentiment_score(sentiment_analysis)
         gap = abs(sentiment_score - assessment_score)
@@ -341,7 +355,7 @@ def detect_faking(assessment, work_logs, sentiment_analysis):
             )
             suspicion_score += 0.2
 
-    # 4. All answers the same (pattern detection)
+    # 5. All answers the same (pattern detection)
     if answers:
         values = list(answers.values())
         unique_values = set(values)
@@ -352,8 +366,82 @@ def detect_faking(assessment, work_logs, sentiment_analysis):
     is_suspicious = suspicion_score >= 0.3
     return {
         "is_suspicious": is_suspicious,
-        "confidence": round(min(1.0, suspicion_score), 2),
+        "confidence": round(min(1.0, suspicion_score * 100), 2),  # Changed to percentage for UI consistency
         "reasons": reasons,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Emotional Masking Detection
+# ─────────────────────────────────────────────────────────────────────────────
+
+def detect_masking(sentiment_analysis, work_logs):
+    """Detect emotional masking — employee appears positive in communications
+    but objective work data shows overload/burnout risk.
+    
+    This addresses the real-world scenario where burned-out employees
+    maintain a cheerful facade in official communications while struggling.
+    """
+    reasons = []
+    masking_score = 0
+
+    if not sentiment_analysis or not sentiment_analysis.get("messages") or not work_logs:
+        return {"is_masking": False, "confidence": 0, "reasons": [], "severity": "none"}
+
+    avg_polarity = sentiment_analysis.get("average_polarity", 0)
+    positive_ratio = sentiment_analysis.get("positive_count", 0) / max(sentiment_analysis.get("total_messages", 1), 1)
+    work_score = compute_work_pattern_score(work_logs)
+
+    # 1. Overly positive sentiment + high work overload
+    if avg_polarity > 0.15 and work_score > 55:
+        reasons.append(
+            f"Communication tone is positive (polarity +{avg_polarity:.2f}) "
+            f"despite heavy workload indicators (work stress: {work_score:.0f}%)"
+        )
+        masking_score += 0.35
+
+    # 2. Suspiciously high positive ratio with bad work data
+    if positive_ratio > 0.6 and work_score > 50:
+        reasons.append(
+            f"{positive_ratio*100:.0f}% of messages are positive — unusually high "
+            f"given {work_score:.0f}% work stress score"
+        )
+        masking_score += 0.25
+
+    # 3. Positive trend in sentiment BUT worsening work patterns
+    recent_logs = work_logs[-2:] if len(work_logs) >= 2 else work_logs
+    older_logs = work_logs[:2] if len(work_logs) >= 2 else work_logs
+    recent_hours = sum(l["avg_daily_hours"] for l in recent_logs) / len(recent_logs)
+    older_hours = sum(l["avg_daily_hours"] for l in older_logs) / len(older_logs)
+
+    if sentiment_analysis.get("trend") == "improving" and recent_hours > older_hours + 1:
+        reasons.append(
+            "Sentiment is improving but work hours are INCREASING — "
+            "classic overcompensation pattern"
+        )
+        masking_score += 0.2
+
+    # 4. Very low variance in positive messages (forced positivity)
+    if positive_ratio > 0.7 and work_score > 45:
+        reasons.append(
+            "Consistently high positivity despite workload suggests emotional labor/masking"
+        )
+        masking_score += 0.2
+
+    is_masking = masking_score >= 0.3
+    
+    if masking_score >= 0.6:
+        severity = "high"
+    elif masking_score >= 0.3:
+        severity = "moderate"
+    else:
+        severity = "none"
+
+    return {
+        "is_masking": is_masking,
+        "confidence": round(min(1.0, masking_score), 2),
+        "reasons": reasons,
+        "severity": severity,
     }
 
 
@@ -367,19 +455,32 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
     Returns a detailed breakdown dict.
     If no assessment has been taken, returns 0% burnout.
     """
-    # If no assessment taken yet, return 0 — employee hasn't been tested
+    # If no assessment taken yet, compute baseline from objective data
     if not assessments:
         sentiment_analysis = analyze_messages(messages)
+        sentiment_score = compute_sentiment_score(sentiment_analysis)
+        work_score = compute_work_pattern_score(work_logs)
+        productivity_score = compute_productivity_score(work_logs)
+
+        # Baseline uses only objective signals (no self-report)
+        baseline = (
+            sentiment_score * 0.30
+            + work_score * 0.50
+            + productivity_score * 0.20
+        )
+        baseline = round(min(100, max(0, baseline)), 1)
+        risk_level = _get_risk_level(baseline)
+
         return {
             "employee_id": employee_id,
-            "composite_score": 0,
-            "adjusted_score": 0,
-            "risk_level": "low",
+            "composite_score": baseline,
+            "adjusted_score": baseline,
+            "risk_level": risk_level,
             "breakdown": {
                 "assessment": {"score": 0, "weight": WEIGHTS["assessment"]},
-                "sentiment": {"score": 0, "weight": WEIGHTS["sentiment"]},
-                "work_pattern": {"score": 0, "weight": WEIGHTS["work_pattern"]},
-                "productivity": {"score": 0, "weight": WEIGHTS["productivity"]},
+                "sentiment": {"score": sentiment_score, "weight": WEIGHTS["sentiment"]},
+                "work_pattern": {"score": work_score, "weight": WEIGHTS["work_pattern"]},
+                "productivity": {"score": productivity_score, "weight": WEIGHTS["productivity"]},
             },
             "sentiment_analysis": sentiment_analysis,
             "faking_detection": {"is_suspicious": False, "confidence": 0, "reasons": []},
@@ -392,7 +493,7 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
     assessment_answers = latest_assessment["answers"]
 
     # Compute individual scores
-    assessment_score = compute_assessment_score(assessment_answers)
+    assessment_score, failed_attention_check = compute_assessment_score(assessment_answers)
     sentiment_analysis = analyze_messages(messages)
     sentiment_score = compute_sentiment_score(sentiment_analysis)
     work_score = compute_work_pattern_score(work_logs)
@@ -407,8 +508,17 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
     )
     composite = round(min(100, max(0, composite)), 1)
 
-    # Anti-faking check
-    faking_result = detect_faking(latest_assessment, work_logs, sentiment_analysis)
+    # Anti-faking check (NEW: passes down trick question results)
+    faking_result = detect_faking(
+        latest_assessment, 
+        work_logs, 
+        sentiment_analysis, 
+        assessment_score, 
+        failed_attention_check
+    )
+
+    # Emotional masking check
+    masking_result = detect_masking(sentiment_analysis, work_logs)
 
     # If faking detected, adjust score upward using objective data
     adjusted_score = composite
@@ -419,6 +529,10 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
             + productivity_score * 0.25
         )
         adjusted_score = round(max(composite, objective_score), 1)
+
+    # If masking detected, bump score up based on work data reality
+    if masking_result["is_masking"] and work_score > adjusted_score:
+        adjusted_score = round(adjusted_score * 0.4 + work_score * 0.6, 1)
 
     # Determine risk level
     risk_level = _get_risk_level(adjusted_score)
@@ -445,6 +559,7 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
         },
         "sentiment_analysis": sentiment_analysis,
         "faking_detection": faking_result,
+        "masking_detection": masking_result,
         "assessment_trend": assessment_trend,
         "last_assessment_date": latest_assessment["timestamp"],
     }

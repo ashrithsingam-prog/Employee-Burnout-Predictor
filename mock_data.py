@@ -160,6 +160,18 @@ ASSESSMENT_QUESTIONS = [
         "question": "I feel supported by my manager and team.",
         "category": "support"
     },
+    {
+        "id": "q16",
+        "question": "To show you are reading this carefully, please select 'Often' for this question.",
+        "category": "attention_check",
+        "expected": 4  # 4 = Often
+    },
+    {
+        "id": "q17",
+        "question": "Please select 'Never' for this question to confirm your attention.",
+        "category": "attention_check",
+        "expected": 1  # 1 = Never
+    },
 ]
 
 # Answer scale: 1 = Never, 2 = Rarely, 3 = Sometimes, 4 = Often, 5 = Always
@@ -240,6 +252,7 @@ def generate_work_logs(employee, weeks=8):
         if profile == "healthy":
             daily_hours = round(random.uniform(7.5, 9.0), 1)
             weekend_hours = round(random.uniform(0, 0.5), 1)
+            weekend_screen_time = round(random.uniform(0, 1.0), 1)
             tasks_completed = random.randint(8, 15)
             late_night_sessions = random.randint(0, 1)
             breaks_taken = random.randint(3, 5)
@@ -248,6 +261,7 @@ def generate_work_logs(employee, weeks=8):
             severity = week / weeks  # lower = more recent = worse
             daily_hours = round(random.uniform(8.5 + (1 - severity) * 2, 10.0 + (1 - severity) * 2), 1)
             weekend_hours = round(random.uniform(1.0 + (1 - severity) * 2, 3.0 + (1 - severity) * 2), 1)
+            weekend_screen_time = round(random.uniform(1.5 + (1 - severity) * 2, 3.0 + (1 - severity) * 3), 1)
             tasks_min = min(max(4, int(12 * severity)), 12)
             tasks_completed = random.randint(tasks_min, 12)
             late_night_sessions = random.randint(1, max(1, 3 + int((1 - severity) * 2)))
@@ -256,6 +270,7 @@ def generate_work_logs(employee, weeks=8):
         else:  # burnout
             daily_hours = round(random.uniform(10.5, 14.0), 1)
             weekend_hours = round(random.uniform(3.0, 7.0), 1)
+            weekend_screen_time = round(random.uniform(4.0, 8.0), 1)
             tasks_completed = random.randint(2, 6)
             late_night_sessions = random.randint(3, 6)
             breaks_taken = random.randint(0, 1)
@@ -265,6 +280,7 @@ def generate_work_logs(employee, weeks=8):
             "week_start": week_start.strftime("%Y-%m-%d"),
             "avg_daily_hours": daily_hours,
             "weekend_hours": weekend_hours,
+            "weekend_screen_time": weekend_screen_time,
             "total_weekly_hours": round(daily_hours * 5 + weekend_hours, 1),
             "tasks_completed": tasks_completed,
             "tasks_assigned": tasks_completed + random.randint(0, 5),

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}BurnShield — Employee Wellness Platform{% endblock %}
+
+{% block fullpage %}
+<div class="login-page">
+    <div class="login-left">
+        <div style="position:relative;z-index:1">
+            <div class="sidebar-brand" style="border:none;padding:0;margin-bottom:2.5rem">
+                <div class="brand-icon">🛡</div>
+                <div>
+                    <div class="brand-text">BurnShield</div>
+                    <div class="brand-sub">Wellness Platform</div>
+                </div>
+            </div>
+
+            <h1 style="font-size:2.8rem;max-width:400px">The Future of <em>Team Wellness</em></h1>
+            <p style="margin-top:1.2rem;max-width:420px;font-size:1rem;line-height:1.8">
+                Harnessing data to predict and prevent employee burnout before it happens.
+                A premium, confidential, and actionable wellbeing monitoring system.
+            </p>
+
+            <div class="login-features" style="margin-top:2.5rem">
+                <div class="login-feature"><span>📊</span> Advanced Risk Scoring</div>
+                <div class="login-feature"><span>💬</span> Sentiment Analysis</div>
+                <div class="login-feature"><span>🔍</span> Faking Detection</div>
+                <div class="login-feature"><span>📩</span> Peer Reporting</div>
+            </div>
+
+            <div style="margin-top:3rem">
+                <a href="{{ url_for('login') }}" class="btn" style="padding:1rem 2.5rem">Enter Platform →</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-right" style="background:var(--bg2)">
+        <div style="text-align:center;max-width:400px">
+            <div style="font-size:4rem;margin-bottom:1.5rem">🛡</div>
+            <h2 style="margin-bottom:1rem">Ready to Start?</h2>
+            <p style="margin-bottom:2rem;color:var(--muted)">Join 2,000+ teams using BurnShield to protect their most
+                valuable assets.</p>
+            <a href="{{ url_for('login') }}" class="btn btn-outline" style="width:100%;justify-content:center">Sign In
+                to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

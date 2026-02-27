@@ -1,138 +1,155 @@
 {% extends "base.html" %}
-{% block title %}HR Dashboard{% endblock %}
+{% block title %}HR Dashboard — BurnShield{% endblock %}
 
 {% block content %}
-<div class="page-header fade-up">
+<div class="page-header">
     <div class="eyebrow"><span class="eyebrow-line"></span>HR Administration<span class="eyebrow-line"></span></div>
     <h1>Employee <em>Wellbeing</em> Overview</h1>
     <p>System-wide burnout analytics, employee risk levels, and actionable insights.</p>
 </div>
 
-<div class="container fade-up">
-    <!-- KPI Overview -->
-    <div class="kpi-grid">
-        <div class="kpi blue">
-            <div class="kpi-label">Total Employees</div>
-            <div class="kpi-val">{{ total }}</div>
-            <div class="kpi-sub">Active in the system</div>
-        </div>
-        <div class="kpi {% if avg_score >= 50 %}red{% elif avg_score >= 30 %}amber{% else %}green{% endif %}">
-            <div class="kpi-label">Avg Burnout Score</div>
-            <div class="kpi-val">{{ avg_score }}%</div>
-            <div class="kpi-sub">Across all employees</div>
-        </div>
-        <div class="kpi {% if at_risk > 0 %}red{% else %}green{% endif %}">
-            <div class="kpi-label">At Risk</div>
-            <div class="kpi-val">{{ at_risk }}</div>
-            <div class="kpi-sub">High/Critical risk employees</div>
-        </div>
+<!-- KPIs -->
+<div class="kpi-grid">
+    <div class="kpi blue">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-label">Total Employees</div>
+        <div class="kpi-val">{{ total }}</div>
+        <div class="kpi-sub">Active in the system</div>
     </div>
+    <div class="kpi green">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-label">Avg Burnout Score</div>
+        <div class="kpi-val">{{ avg_score }}%</div>
+        <div class="kpi-sub">Across all employees</div>
+    </div>
+    <div class="kpi red">
+        <div class="kpi-icon">🔥</div>
+        <div class="kpi-label">At Risk</div>
+        <div class="kpi-val">{{ at_risk }}</div>
+        <div class="kpi-sub">High/Critical risk employees</div>
+    </div>
+    <div class="kpi purple">
+        <div class="kpi-icon">📩</div>
+        <div class="kpi-label">Peer Reports</div>
+        <div class="kpi-val">{{ peer_reports|length }}</div>
+        <div class="kpi-sub">Submitted concerns</div>
+    </div>
+</div>
 
-    <!-- Risk Distribution -->
-    <div class="card mb-3">
-        <div class="card-header">Risk Distribution</div>
-        <div class="grid-2" style="gap:1rem">
-            {% for level, data in risk_dist.items() %}
-            {% if level == 'low' %}{% set color = "var(--green)" %}{% set badge_cls = "badge-green" %}
-            {% elif level == 'moderate' %}{% set color = "var(--amber)" %}{% set badge_cls = "badge-amber" %}
-            {% elif level == 'high' %}{% set color = "var(--red)" %}{% set badge_cls = "badge-red" %}
-            {% else %}{% set color = "var(--red)" %}{% set badge_cls = "badge-red" %}{% endif %}
-            <div class="meter">
-                <div class="meter-head">
-                    <span class="badge {{ badge_cls }}">{{ level|upper }}</span>
-                    <span class="meter-label"></span>
-                    <span class="meter-pct" style="color:{{ color }}">{{ data.count }}</span>
-                </div>
-                <div class="meter-track">
-                    <div class="meter-fill" style="width:{{ data.pct }}%;background:{{ color }}"></div>
-                </div>
+<!-- Risk Distribution -->
+<div class="card" style="margin-bottom:1.5rem">
+    <div class="card-header">⚡ Risk Distribution</div>
+    <div class="grid-2" style="grid-template-columns:repeat(4,1fr)">
+        {% for level in ['low', 'moderate', 'high', 'critical'] %}
+        {% set item = risk_dist[level] %}
+        <div style="text-align:center;padding:.8rem">
+            <div
+                style="font-size:1.6rem;font-weight:800;
+                {% if level == 'low' %}color:var(--green){% elif level == 'moderate' %}color:var(--amber){% elif level == 'high' %}color:var(--red){% else %}color:var(--red){% endif %}">
+                {{ item.count }}
             </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Search/Filter -->
-    <div class="card mb-3">
-        <div class="card-header">Employee Database</div>
-        <form method="GET" action="{{ url_for('hr_dashboard') }}" class="search-form">
-            <input type="text" name="search" value="{{ search_query or '' }}"
-                placeholder="Search by name, ID, or department..." style="margin-bottom:0">
-            <select name="risk" style="margin-bottom:0">
-                <option value="">All Risk Levels</option>
-                <option value="low" {{ 'selected' if risk_filter=='low' }}>Low</option>
-                <option value="moderate" {{ 'selected' if risk_filter=='moderate' }}>Moderate</option>
-                <option value="high" {{ 'selected' if risk_filter=='high' }}>High</option>
-                <option value="critical" {{ 'selected' if risk_filter=='critical' }}>Critical</option>
-            </select>
-            <button type="submit" class="btn btn-sm">Filter</button>
-        </form>
-
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Department</th>
-                        <th>Role</th>
-                        <th>Burnout Score</th>
-                        <th>Risk Level</th>
-                        <th>Last Assessment</th>
-                        <th>Details</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for emp in employees %}
-                    <tr>
-                        <td style="font-weight:600;font-size:.78rem;color:var(--muted)">{{ emp.id }}</td>
-                        <td class="emp-name">{{ emp.name }}{% if emp.is_hr %} <span class="badge badge-blue"
-                                style="font-size:.6rem">HR</span>{% endif %}</td>
-                        <td>{{ emp.department }}</td>
-                        <td style="font-size:.82rem;color:var(--muted)">{{ emp.role }}</td>
-                        <td>
-                            <span
-                                style="font-weight:700;font-family:'Playfair Display',serif;color:{% if emp.burnout_score >= 65 %}var(--red){% elif emp.burnout_score >= 35 %}var(--amber){% else %}var(--green){% endif %}">
-                                {{ emp.burnout_score }}%
-                            </span>
-                        </td>
-                        <td>
-                            {% if emp.risk_level == 'low' %}<span class="badge badge-green">Low</span>
-                            {% elif emp.risk_level == 'moderate' %}<span class="badge badge-amber">Moderate</span>
-                            {% elif emp.risk_level == 'high' %}<span class="badge badge-red">High</span>
-                            {% else %}<span class="badge badge-red">Critical</span>{% endif %}
-                        </td>
-                        <td style="font-size:.82rem;color:var(--muted)">{{ emp.last_assessment or 'Never' }}</td>
-                        <td>
-                            <a href="{{ url_for('hr_employee_detail', emp_id=emp.id) }}" class="btn btn-outline btn-sm"
-                                style="padding:.3rem .8rem;font-size:.72rem">
-                                View →
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Peer Reports Summary -->
-    {% if peer_reports %}
-    <div class="card mb-3" style="border-left:3px solid var(--amber)">
-        <div class="card-header">📩 Peer Concern Reports ({{ peer_reports|length }})</div>
-        {% for report in peer_reports[:5] %}
-        <div class="alert-item">
-            <span class="alert-icon">{% if report.status == 'pending' %}🔸{% else %}✅{% endif %}</span>
-            <div class="alert-body">
-                <div class="alert-title">{{ report.concern_type|title }} concern for {{ report.reported_employee_name }}
-                </div>
-                <div class="alert-msg">{{ report.description[:100] }}{% if report.description|length > 100 %}...{% endif
-                    %}</div>
-                <div class="alert-time">{{ report.timestamp }} · {{ report.reported_department }} · {{
-                    report.status|capitalize }}</div>
-            </div>
+            <div
+                style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:.2rem">
+                {{ level }}</div>
+            <div style="font-size:.72rem;color:var(--muted2)">{{ item.pct }}%</div>
         </div>
         {% endfor %}
     </div>
-    {% endif %}
 </div>
+
+<!-- Search & Filter -->
+<div class="card">
+    <div class="card-header">👥 Employee Database</div>
+
+    <form method="GET" action="{{ url_for('hr_dashboard') }}" class="search-form">
+        <input type="text" name="search" placeholder="Search by name, ID, or department…" value="{{ search_query }}"
+            style="flex:1;min-width:180px">
+        <select name="risk">
+            <option value="">All Risk Levels</option>
+            <option value="low" {% if risk_filter=='low' %}selected{% endif %}>Low</option>
+            <option value="moderate" {% if risk_filter=='moderate' %}selected{% endif %}>Moderate</option>
+            <option value="high" {% if risk_filter=='high' %}selected{% endif %}>High</option>
+            <option value="critical" {% if risk_filter=='critical' %}selected{% endif %}>Critical</option>
+        </select>
+        <button type="submit" class="btn btn-sm">Filter</button>
+    </form>
+
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Role</th>
+                    <th>Burnout Score</th>
+                    <th>Risk Level</th>
+                    <th>Last Assessment</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td style="font-family:monospace;font-size:.78rem;color:var(--muted)">{{ emp.id }}</td>
+                    <td class="emp-name">{{ emp.name }}</td>
+                    <td>{{ emp.department }}</td>
+                    <td>{{ emp.role }}</td>
+                    <td>
+                        <span style="font-weight:700;
+                            {% if emp.burnout_score < 30 %}color:var(--green)
+                            {% elif emp.burnout_score < 50 %}color:var(--amber)
+                            {% elif emp.burnout_score < 70 %}color:var(--red)
+                            {% else %}color:var(--red){% endif %}">
+                            {{ emp.burnout_score }}%
+                        </span>
+                    </td>
+                    <td>
+                        <span
+                            class="badge badge-{% if emp.risk_level == 'low' %}green{% elif emp.risk_level == 'moderate' %}amber{% elif emp.risk_level == 'high' %}red{% else %}red{% endif %}">
+                            {{ emp.risk_level|upper }}
+                        </span>
+                    </td>
+                    <td style="font-size:.78rem;color:var(--muted)">{{ emp.last_assessment or 'Never' }}</td>
+                    <td>
+                        <a href="{{ url_for('hr_employee_detail', emp_id=emp.id) }}" class="btn btn-outline btn-sm"
+                            style="padding:.35rem .8rem;font-size:.72rem">
+                            View →
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Peer Reports -->
+{% if peer_reports %}
+<div class="card mt-3">
+    <div class="card-header">📩 Recent Peer Concern Reports</div>
+    {% for report in peer_reports[:5] %}
+    <div class="alert-item">
+        <span class="alert-icon">
+            {% if report.concern_type == 'burnout' %}🔥
+            {% elif report.concern_type == 'workload' %}📋
+            {% elif report.concern_type == 'behavior_change' %}🔄
+            {% elif report.concern_type == 'health' %}❤️
+            {% else %}📌{% endif %}
+        </span>
+        <div class="alert-body">
+            <div class="alert-title">{{ report.reported_employee_name }}
+                <span class="badge badge-blue" style="font-size:.58rem;margin-left:.4rem">{{
+                    report.concern_type|replace('_', ' ')|title }}</span>
+            </div>
+            <div class="alert-msg">{{ report.description[:120] }}{% if report.description|length > 120 %}…{% endif %}
+            </div>
+            <div class="alert-time">Reported {{ report.timestamp }} · By {{ report.reporter_name }}</div>
+        </div>
+        <span class="badge {% if report.status == 'pending' %}badge-amber{% else %}badge-green{% endif %}">{{
+            report.status }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 {% endblock %}

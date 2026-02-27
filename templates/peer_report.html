@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Peer Report — BurnShield{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="eyebrow"><span class="eyebrow-line"></span>Confidential Report<span class="eyebrow-line"></span></div>
+    <h1>Peer <em>Concern</em> Report</h1>
+    <p>If you've noticed signs of burnout or stress in a colleague, submit a confidential report.</p>
+</div>
+
+{% if success %}
+<div class="success-card">
+    <div class="check">✅</div>
+    <h3>Report Submitted Successfully</h3>
+    <p>Your concern has been forwarded to the HR team. Thank you for looking out for your colleague's wellbeing.</p>
+    <div class="result-actions" style="margin-top:1.5rem">
+        <a href="{{ url_for('peer_report') }}" class="btn btn-outline btn-sm">Submit Another Report</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-sm">Back to Dashboard</a>
+    </div>
+</div>
+{% else %}
+
+{% if error %}
+<div class="form-error">{{ error }}</div>
+{% endif %}
+
+<div class="info-strip mb-3">
+    <strong>🔒 Your privacy matters:</strong> Reports can be submitted anonymously. HR will act on the concern
+    without revealing the reporter's identity unless you choose otherwise.
+</div>
+
+<div class="card" style="max-width:680px">
+    <div class="card-header">📩 Report a Concern</div>
+
+    <form method="POST" action="{{ url_for('peer_report') }}">
+        <div class="form-group">
+            <label for="reported_employee_id">Employee ID of Colleague</label>
+            <input type="text" name="reported_employee_id" id="reported_employee_id" placeholder="e.g. EMP001" required
+                style="text-transform:uppercase" pattern="EMP\d{3}" title="Enter Employee ID like EMP001">
+            <div class="form-hint">Enter the Employee ID (e.g. EMP001) of the colleague you're concerned about.</div>
+        </div>
+
+        <div class="form-group">
+            <label for="concern_type">Type of Concern</label>
+            <select name="concern_type" id="concern_type" required>
+                <option value="workload">Excessive Workload</option>
+                <option value="burnout">Signs of Burnout</option>
+                <option value="behavior_change">Behavioral Change</option>
+                <option value="health">Health Concerns</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Describe Your Concern</label>
+            <textarea name="description" id="description"
+                placeholder="What have you observed? How long has this been happening? Be as specific as you can…"
+                required></textarea>
+            <div class="form-hint">Specific observations help HR respond more effectively.</div>
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-weight:500">
+                <input type="checkbox" name="anonymous" checked style="width:auto;margin:0;accent-color:var(--green)">
+                Submit anonymously
+            </label>
+            <div class="form-hint">If checked, your identity will not be shared with anyone.</div>
+        </div>
+
+        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-top:1.5rem">
+            <button type="submit" class="btn">Submit Report →</button>
+            <a href="{{ url_for('dashboard') }}" style="font-size:.84rem;color:var(--muted)">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

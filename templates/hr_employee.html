@@ -1,216 +1,307 @@
 {% extends "base.html" %}
-{% block title %}{{ employee.name }} — Details{% endblock %}
+{% block title %}{{ employee.name }} — HR View{% endblock %}
 
 {% block content %}
-<div class="container fade-up" style="padding-top:2rem">
-    <!-- Back Link -->
+<!-- Back link -->
+<div style="margin-bottom:1.5rem">
     <a href="{{ url_for('hr_dashboard') }}"
-        style="font-size:.84rem;color:var(--muted);display:inline-flex;align-items:center;gap:.3rem;margin-bottom:1.5rem">
+        style="font-size:.82rem;color:var(--muted);display:inline-flex;align-items:center;gap:.4rem">
         ← Back to HR Dashboard
     </a>
+</div>
 
-    <div class="grid-sidebar">
-        <!-- LEFT: Profile -->
-        <div>
-            <div class="card profile-card">
-                <div class="profile-avatar">
-                    {% if employee.is_hr %}🛡️{% else %}👤{% endif %}
-                </div>
-                <div class="profile-name">{{ employee.name }}</div>
-                <div class="profile-role">{{ employee.role }} · {{ employee.department }}</div>
-
-                {% set score = burnout.adjusted_score %}
-                {% set wellness = 100 - score %}
-                {% set circ = 326.7 %}
-                {% set offset = circ - (wellness / 100) * circ %}
-                {% if score == 0 and not burnout.last_assessment_date %}
-                {% set ring_color = "var(--muted2)" %}
-                {% elif wellness >= 70 %}
-                {% set ring_color = "var(--green)" %}
-                {% elif wellness >= 40 %}
-                {% set ring_color = "var(--amber)" %}
-                {% else %}
-                {% set ring_color = "var(--red)" %}
-                {% endif %}
-
-                <div class="wellness-ring">
-                    <svg viewBox="0 0 120 120">
-                        <circle class="bg" cx="60" cy="60" r="52" />
-                        <circle class="fill" cx="60" cy="60" r="52" stroke="{{ ring_color }}"
-                            stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}" />
-                    </svg>
-                    <div class="label">
-                        {% if burnout.last_assessment_date %}
-                        <span class="val" style="color:{{ ring_color }}">{{ wellness|round|int }}%</span>
-                        <span class="sub">Wellness</span>
-                        {% else %}
-                        <span class="val" style="color:var(--muted2)">—</span>
-                        <span class="sub">No test</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="profile-stat"><span>Employee ID</span><span>{{ employee.id }}</span></div>
-                <div class="profile-stat"><span>Joined</span><span>{{ employee.join_date }}</span></div>
-                <div class="profile-stat"><span>Burnout Score</span>
-                    <span
-                        class="{% if score >= 65 %}text-red{% elif score >= 35 %}text-amber{% else %}text-green{% endif %}">{{
-                        score }}%</span>
-                </div>
-                <div class="profile-stat"><span>Risk Level</span>
-                    <span>
-                        {% if burnout.risk_level == 'low' %}<span class="badge badge-green">Low</span>
-                        {% elif burnout.risk_level == 'moderate' %}<span class="badge badge-amber">Moderate</span>
-                        {% elif burnout.risk_level == 'high' %}<span class="badge badge-red">High</span>
-                        {% else %}<span class="badge badge-red">Critical</span>{% endif %}
-                    </span>
-                </div>
-                <div class="profile-stat"><span>Last Assessment</span><span>{{ burnout.last_assessment_date or 'Never'
-                        }}</span></div>
+<div class="grid-sidebar">
+    <!-- LEFT: Profile -->
+    <div>
+        <div class="card profile-card" style="margin-bottom:1.2rem">
+            <div class="profile-avatar">👤</div>
+            <div class="profile-name">{{ employee.name }}</div>
+            <div class="profile-role">{{ employee.role }} · {{ employee.department }}</div>
+            <div class="profile-stat"><span>Employee ID</span> <span>{{ employee.id }}</span></div>
+            <div class="profile-stat"><span>Email</span> <span style="font-size:.75rem">{{ employee.email }}</span>
             </div>
+            <div class="profile-stat"><span>Joined</span> <span>{{ employee.join_date }}</span></div>
         </div>
 
-        <!-- RIGHT: Details -->
-        <div>
-            <!-- Score Breakdown -->
-            {% if burnout.last_assessment_date %}
-            <div class="card mb-2">
-                <div class="card-header">📊 Score Breakdown</div>
-                {% set bd = burnout.breakdown %}
-                {% set dim_icons = {'assessment': '📝', 'sentiment': '💬', 'work_pattern': '⏰', 'productivity': '📈'} %}
-                {% for key in ['assessment', 'sentiment', 'work_pattern', 'productivity'] %}
-                {% set s = bd[key].score %}
-                {% if s <= 25 %}{% set color="var(--green)" %}{% set tag="Low" %} {% elif s <=50 %}{% set
-                    color="var(--blue)" %}{% set tag="Moderate" %} {% elif s <=75 %}{% set color="var(--amber)" %}{% set
-                    tag="Elevated" %} {% else %}{% set color="var(--red)" %}{% set tag="High" %}{% endif %} <div
-                    class="meter">
-                    <div class="meter-head">
-                        <span class="meter-icon">{{ dim_icons[key] }}</span>
-                        <span class="meter-label">{{ key|replace('_', ' ')|title }}</span>
-                        <span class="meter-pct" style="color:{{ color }}">{{ s|round|int }}%</span>
-                        <span class="meter-tag"
-                            style="background:{{ color }}15;color:{{ color }};border-color:{{ color }}30">{{ tag
-                            }}</span>
-                    </div>
-                    <div class="meter-track">
-                        <div class="meter-fill" style="width:{{ s }}%;background:{{ color }}"></div>
-                    </div>
+        <!-- Risk Badge -->
+        <div class="card" style="text-align:center;padding:1.2rem">
+            <div class="kpi-label" style="margin-bottom:.5rem">Current Risk Level</div>
+            <span
+                class="badge badge-lg badge-{% if burnout.risk_level == 'low' %}green{% elif burnout.risk_level == 'moderate' %}amber{% elif burnout.risk_level == 'high' %}red{% else %}red{% endif %}">
+                {{ burnout.risk_level|upper }}
+            </span>
+            <div style="font-size:2rem;font-weight:800;margin-top:.6rem;
+                {% if burnout.risk_level == 'low' %}color:var(--green)
+                {% elif burnout.risk_level == 'moderate' %}color:var(--amber)
+                {% else %}color:var(--red){% endif %}">
+                {{ burnout.adjusted_score }}%
+            </div>
+            <div style="font-size:.72rem;color:var(--muted)">Composite Burnout Score</div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Details -->
+    <div>
+        <!-- Score Breakdown -->
+        <div class="card" style="margin-bottom:1.2rem">
+            <div class="card-header">📈 Score Breakdown</div>
+            {% for key, item in burnout.breakdown.items() %}
+            {% set val = item.score %}
+            {% if val < 30 %}{% set c="var(--green)" %}{% set tag_class="badge-green" %}{% set level="Low" %} {% elif
+                val < 50 %}{% set c="var(--amber)" %}{% set tag_class="badge-amber" %}{% set level="Moderate" %} {% elif
+                val < 70 %}{% set c="var(--red)" %}{% set tag_class="badge-amber" %}{% set level="High" %} {% else %}{%
+                set c="var(--red)" %}{% set tag_class="badge-red" %}{% set level="Critical" %}{% endif %} <div
+                class="meter">
+                <div class="meter-head">
+                    <span class="meter-label">{{ key|replace('_', ' ')|title }}
+                        <span class="text-muted" style="font-size:.72rem;font-weight:400">({{ item.weight
+                            }}%)</span></span>
+                    <span class="badge {{ tag_class }}" style="font-size:.6rem">{{ level }}</span>
+                    <span class="meter-pct" style="color:{{ c }}">{{ val }}%</span>
+                </div>
+                <div class="meter-track">
+                    <div class="meter-fill" style="width:{{ val }}%;background:{{ c }}"></div>
+                </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Sentiment Analysis -->
+    <!-- Emotional Masking Detection -->
+    {% if burnout.masking_detection is defined and burnout.masking_detection.is_masking %}
+    <div class="card" style="margin-bottom:1.2rem;border-left:3px solid var(--purple);background:var(--purple-dim)">
+        <div class="card-header" style="color:var(--purple)">&#129504; Emotional Masking Detected
+            <span class="badge badge-purple" style="margin-left:.5rem">{{ burnout.masking_detection.severity|upper
+                }}</span>
+        </div>
+        <div class="info-strip" style="background:rgba(167,139,250,.08);border-color:var(--purple);margin:0 0 1rem 0">
+            <strong style="color:var(--purple)">&#9888; What this means:</strong> This employee appears positive in
+            official communications,
+            but their objective work data (hours, weekend activity, task load) tells a different story.
+            This is a common psychological response called <strong style="color:var(--purple)">toxic positivity
+                masking</strong>.
+        </div>
+        <div style="font-size:.78rem;color:var(--ink2)">
+            <div style="font-weight:700;margin-bottom:.5rem;color:var(--purple)">Detection Reasons:</div>
+            {% for reason in burnout.masking_detection.reasons %}
+            <div
+                style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.5rem;padding:.5rem .7rem;background:var(--surface2);border-radius:8px">
+                <span style="color:var(--purple);flex-shrink:0">&#10148;</span>
+                <span>{{ reason }}</span>
             </div>
             {% endfor %}
+        </div>
+        <div style="margin-top:1rem;font-size:.72rem;color:var(--muted2)">
+            Confidence: {{ (burnout.masking_detection.confidence * 100)|round }}% &middot;
+            Recommendation: Schedule a private 1-on-1 check-in to provide a safe space for honest communication.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-bottom:1.2rem">
+        <div class="card-header">💬 Sentiment Analysis</div>
+        {% set sa = burnout.sentiment_analysis %}
+        <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+            <div class="pill">{{ sa.total_messages|default(0) }} messages analyzed</div>
+            <div class="pill">Polarity: {{ sa.polarity|default(0)|round(2) }}</div>
+        </div>
+        {% if sa.total_messages and sa.total_messages > 0 %}
+        {% set pos_pct = ((sa.positive_count|default(0)) / sa.total_messages * 100)|round(1) %}
+        {% set neu_pct = ((sa.neutral_count|default(0)) / sa.total_messages * 100)|round(1) %}
+        {% set neg_pct = ((sa.negative_count|default(0)) / sa.total_messages * 100)|round(1) %}
+        <div class="meter">
+            <div class="meter-head">
+                <span class="meter-icon">😊</span>
+                <span class="meter-label">Positive</span>
+                <span class="meter-pct text-green">{{ sa.positive_count|default(0) }} ({{ pos_pct }}%)</span>
+            </div>
+            <div class="meter-track">
+                <div class="meter-fill" style="width:{{ pos_pct }}%;background:var(--green)"></div>
+            </div>
+        </div>
+        <div class="meter">
+            <div class="meter-head">
+                <span class="meter-icon">😐</span>
+                <span class="meter-label">Neutral</span>
+                <span class="meter-pct text-blue">{{ sa.neutral_count|default(0) }} ({{ neu_pct }}%)</span>
+            </div>
+            <div class="meter-track">
+                <div class="meter-fill" style="width:{{ neu_pct }}%;background:var(--blue)"></div>
+            </div>
+        </div>
+        <div class="meter">
+            <div class="meter-head">
+                <span class="meter-icon">😟</span>
+                <span class="meter-label">Negative</span>
+                <span class="meter-pct text-red">{{ sa.negative_count|default(0) }} ({{ neg_pct }}%)</span>
+            </div>
+            <div class="meter-track">
+                <div class="meter-fill" style="width:{{ neg_pct }}%;background:var(--red)"></div>
+            </div>
         </div>
         {% else %}
-        <div class="card mb-2">
-            <div class="empty-state">
-                <div class="icon">📋</div>
-                <p>This employee has not taken any assessments yet.</p>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Faking Detection -->
-        {% if burnout.faking_detection.is_suspicious %}
-        <div class="info-strip danger mb-2">
-            <strong>⚠️ Anti-Faking Alert:</strong> Inconsistency detected between self-report and objective data.
-            Confidence: {{ burnout.faking_detection.confidence|round|int }}%.
-            {% for reason in burnout.faking_detection.reasons %}
-            <br>• {{ reason }}
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <!-- Sentiment Analysis -->
-        {% if burnout.sentiment_analysis %}
-        <div class="card mb-2">
-            <div class="card-header">💬 Communication Sentiment</div>
-            {% set sa = burnout.sentiment_analysis %}
-            <div class="grid-3" style="margin-bottom:1rem">
-                <div style="text-align:center;padding:.8rem">
-                    <div
-                        style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--green)">
-                        {{ sa.positive_pct|default(0)|round|int }}%</div>
-                    <div
-                        style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em">
-                        Positive</div>
-                </div>
-                <div style="text-align:center;padding:.8rem">
-                    <div
-                        style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--muted)">
-                        {{ sa.neutral_pct|default(0)|round|int }}%</div>
-                    <div
-                        style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em">
-                        Neutral</div>
-                </div>
-                <div style="text-align:center;padding:.8rem">
-                    <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--red)">
-                        {{ sa.negative_pct|default(0)|round|int }}%</div>
-                    <div
-                        style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em">
-                        Negative</div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- HR Actions -->
-        <div class="card mb-2" style="border-left:3px solid var(--blue)">
-            <div class="card-header">⚡ HR Actions ({{ actions|length }})</div>
-            {% if actions %}
-            {% for action in actions %}
-            <div class="alert-item">
-                <span class="alert-icon">{% if action.status == 'active' %}🔵{% else %}✅{% endif %}</span>
-                <div class="alert-body">
-                    <div class="alert-title">{{ action.action_type|replace('_', ' ')|title }}</div>
-                    <div class="alert-msg">{{ action.details }}</div>
-                    <div class="alert-time">{{ action.timestamp }} · {{ action.status|capitalize }}</div>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <p style="font-size:.84rem;color:var(--muted)">No HR actions recorded for this employee.</p>
-            {% endif %}
-
-            <!-- New Action Form -->
-            <div class="action-form">
-                <h4>➕ Add New Action</h4>
-                <form method="POST" action="{{ url_for('hr_action') }}">
-                    <input type="hidden" name="employee_id" value="{{ employee.id }}">
-                    <div class="form-group">
-                        <label>Action Type</label>
-                        <select name="action_type" required>
-                            <option value="reduce_workload">Reduce Workload</option>
-                            <option value="time_off">Grant Time Off</option>
-                            <option value="counseling">Recommend Counseling</option>
-                            <option value="task_redistribution">Task Redistribution</option>
-                            <option value="schedule_1on1">Schedule 1-on-1</option>
-                            <option value="immediate_intervention">Immediate Intervention</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Details</label>
-                        <textarea name="details" placeholder="Describe the action being taken..." required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-sm">Submit Action →</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Peer Reports -->
-        {% if peer_reports %}
-        <div class="card" style="border-left:3px solid var(--amber)">
-            <div class="card-header">📩 Peer Concern Reports ({{ peer_reports|length }})</div>
-            {% for report in peer_reports %}
-            <div class="alert-item">
-                <span class="alert-icon">🔸</span>
-                <div class="alert-body">
-                    <div class="alert-title">{{ report.concern_type|title }} (from {{ report.reporter_name }})</div>
-                    <div class="alert-msg">{{ report.description }}</div>
-                    <div class="alert-time">{{ report.timestamp }} · {{ report.status|capitalize }}</div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+        <p style="font-size:.84rem">No communication data available.</p>
         {% endif %}
     </div>
+
+    <!-- Faking Detection -->
+    {% if burnout.faking_detection.is_suspicious %}
+    <div class="info-strip warning mb-3">
+        <strong>⚠️ Faking Detection Alert</strong><br>
+        Confidence: {{ burnout.faking_detection.confidence }}%<br>
+        {% for flag in burnout.faking_detection.flags %}
+        · {{ flag }}<br>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Safe Icebreakers (Ghostwritten Empathy) -->
+    {% if icebreakers %}
+    <div class="card" style="margin-bottom:1.2rem;border-left:3px solid var(--blue)">
+        <div class="card-header" style="color:var(--blue)">&#128172; Actionable Empathy (Safe Icebreakers)</div>
+        <p style="font-size:.78rem;margin-bottom:1rem">Not sure how to initiate contact? The system has generated these
+            safe, context-aware outreach messages based on {{ employee.name }}'s current data signature. Copy and paste
+            into Slack or Email.</p>
+
+        {% for ib in icebreakers %}
+        <div
+            style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:.8rem;position:relative">
+            <div style="font-weight:700;font-size:.82rem;color:var(--ink);margin-bottom:.5rem">{{ ib.title }}</div>
+            <div id="ib-text-{{ loop.index }}" style="font-size:.85rem;color:var(--ink2);line-height:1.5">{{ ib.text }}
+            </div>
+            <button
+                onclick="navigator.clipboard.writeText(document.getElementById('ib-text-{{ loop.index }}').innerText); this.innerText='Copied! ✓'; this.style.color='var(--green)'; setTimeout(() => {this.innerText='Copy'; this.style.color='var(--ink)';}, 2000);"
+                style="position:absolute;top:1rem;right:1rem;background:var(--surface);border:1px solid var(--border);color:var(--ink);border-radius:4px;padding:.2rem .6rem;font-size:.7rem;cursor:pointer;transition:all 0.2s">Copy</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- HR Actions -->
+    <div class="card" style="margin-bottom:1.2rem">
+        <div class="card-header">📋 HR Actions</div>
+        {% if actions %}
+        {% for action in actions %}
+        <div class="alert-item">
+            <span class="alert-icon">📌</span>
+            <div class="alert-body">
+                <div class="alert-title">{{ action.action_type|replace('_', ' ')|title }}</div>
+                <div class="alert-msg">{{ action.details }}</div>
+                <div class="alert-time">{{ action.timestamp }} · {{ action.status }}</div>
+            </div>
+            <span class="badge {% if action.status == 'active' %}badge-blue{% else %}badge-green{% endif %}">{{
+                action.status }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state" style="padding:1.5rem">
+            <p style="font-size:.84rem">No HR actions recorded yet.</p>
+        </div>
+        {% endif %}
+
+        <!-- Add Action Form -->
+        <div class="action-form">
+            <h4>Add New Action</h4>
+            <form method="POST" action="{{ url_for('hr_action') }}">
+                <input type="hidden" name="employee_id" value="{{ employee.id }}">
+                <div class="form-group">
+                    <label for="action_type">Action Type</label>
+                    <select name="action_type" id="action_type" required>
+                        <option value="reduce_workload">Reduce Workload</option>
+                        <option value="schedule_meeting">Schedule 1:1 Meeting</option>
+                        <option value="grant_time_off">Grant Time Off</option>
+                        <option value="team_reassignment">Team Reassignment</option>
+                        <option value="wellness_program">Wellness Program</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="details">Details</label>
+                    <textarea name="details" id="details" placeholder="Describe the action plan…" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-sm">Submit Action →</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- LAST 4 WEEKS WORK DATA (HR Intelligence) -->
+    <div class="card">
+        <div class="card-header">&#128202; Last 4 Weeks &mdash; Work Activity Tracker</div>
+        {% if burnout.faking_detection.is_suspicious %}
+        <div class="info-strip danger" style="margin-top:0;margin-bottom:1rem">
+            <strong>&#9888; Faking Suspected:</strong> Cross-reference this work data with the employee's self-reported
+            assessment. High hours + low self-reported burnout = potential faking.
+        </div>
+        {% endif %}
+        <p style="font-size:.78rem;margin-bottom:1.2rem">Objective work metrics captured from company systems. Use these
+            to verify self-reported burnout levels.</p>
+        <div class="table-wrap">
+            <table class="data-table" style="font-size:.82rem">
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Avg Daily Hrs</th>
+                        <th>Weekend Screen Time</th>
+                        <th>Tasks Done</th>
+                        <th>Late Nights</th>
+                        <th>Breaks/Day</th>
+                        <th>Absent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in work_logs %}
+                    {% set hrs_color = 'var(--green)' if log.avg_daily_hours <= 9 else ('var(--amber)' if
+                        log.avg_daily_hours <=11 else 'var(--red)' ) %} {% set wk_color='var(--green)' if
+                        log.weekend_screen_time <=1 else ('var(--amber)' if log.weekend_screen_time <=3
+                        else 'var(--red)' ) %} {% set ln_color='var(--green)' if log.late_night_sessions <=1 else
+                        ('var(--amber)' if log.late_night_sessions <=3 else 'var(--red)' ) %} <tr>
+                        <td style="font-weight:600;color:var(--ink)">{{ log.week_start }}</td>
+                        <td>
+                            <span style="font-weight:700;color:{{ hrs_color }}">{{ log.avg_daily_hours }}h</span>
+                            <div class="meter-track" style="margin-top:4px">
+                                <div class="meter-fill"
+                                    style="width:{{ (log.avg_daily_hours / 14 * 100)|round }}%;background:{{ hrs_color }}">
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-weight:700;color:{{ wk_color }}">{{ log.weekend_screen_time }}h</span>
+                            <div class="meter-track" style="margin-top:4px">
+                                <div class="meter-fill"
+                                    style="width:{{ (log.weekend_screen_time / 8 * 100)|round }}%;background:{{ wk_color }}">
+                                </div>
+                            </div>
+                        </td>
+                        <td style="font-weight:600">{{ log.tasks_completed }} / {{ log.tasks_assigned }}</td>
+                        <td><span style="font-weight:700;color:{{ ln_color }}">{{ log.late_night_sessions }}</span></td>
+                        <td>{{ log.breaks_taken_per_day }}</td>
+                        <td>{{ log.days_absent }}</td>
+                        </tr>
+                        {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Peer Reports -->
+    {% if peer_reports %}
+    <div class="card">
+        <div class="card-header">&#128233; Peer Concern Reports</div>
+        {% for report in peer_reports %}
+        <div class="alert-item">
+            <span class="alert-icon">&#128204;</span>
+            <div class="alert-body">
+                <div class="alert-title">{{ report.concern_type|replace('_', ' ')|title }}
+                    <span class="badge {% if report.status == 'pending' %}badge-amber{% else %}badge-green{% endif %}"
+                        style="font-size:.58rem;margin-left:.4rem">{{ report.status }}</span>
+                </div>
+                <div class="alert-msg">{{ report.description }}</div>
+                <div class="alert-time">{{ report.timestamp }} &middot; By {{ report.reporter_name }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 </div>
 {% endblock %}

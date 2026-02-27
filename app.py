@@ -1,13 +1,18 @@
 """
-Employee Burnout Prediction & Monitoring — Flask API Server
+Employee Burnout Prediction & Monitoring — Flask Server
 ============================================================
-Endpoints for employee login, burnout assessments, HR dashboard,
-peer reporting, HR actions, and anti-faking intelligence.
+Server-side rendered pages + JSON API endpoints for employee login,
+burnout assessments, HR dashboard, peer reporting, HR actions, and
+anti-faking intelligence.
 """
 
-from flask import Flask, jsonify, request, render_template
+from flask import (
+    Flask, jsonify, request, render_template,
+    session, redirect, url_for, flash,
+)
 from datetime import datetime
 import uuid
+import os
 
 from mock_data import MOCK_DATA, ASSESSMENT_QUESTIONS, generate_assessment_answers
 from burnout_engine import (
@@ -18,7 +23,13 @@ from burnout_engine import (
     compute_assessment_score,
 )
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(
+    __name__,
+    static_folder=os.path.join(BASE_DIR, "static"),
+    template_folder=os.path.join(BASE_DIR, "templates"),
+)
+app.secret_key = "burnshield-secret-key-2026"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # In-Memory Data Store (loaded from mock_data on startup)
@@ -36,8 +47,48 @@ DATA = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Template Context Processor — inject session info into every template
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.context_processor
+def inject_session_globals():
+    """Make session data available in all templates."""
+    emp_id = session.get("emp_id")
+    current_employee = DATA["employees"].get(emp_id) if emp_id else None
+    return {
+        "session": session,
+        "current_employee": current_employee,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Helper Functions
 # ─────────────────────────────────────────────────────────────────────────────
+
+def login_required(f):
+    """Decorator to require login for a page route."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "emp_id" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def hr_required(f):
+    """Decorator to require HR role for a page route."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "emp_id" not in session:
+            return redirect(url_for("login"))
+        if not session.get("is_hr"):
+            flash("Access denied. HR credentials required.", "error")
+            return redirect(url_for("dashboard"))
+        return f(*args, **kwargs)
+    return decorated
+
 
 def get_employee_burnout(emp_id):
     """Compute full burnout analysis for one employee."""
@@ -57,65 +108,433 @@ def employee_summary(emp):
         "department": emp["department"],
         "role": emp["role"],
         "join_date": emp["join_date"],
+        "is_hr": emp.get("is_hr", False),
         "burnout_score": burnout["adjusted_score"],
         "risk_level": burnout["risk_level"],
-        "last_assessment_date": burnout["last_assessment_date"],
+        "last_assessment": burnout["last_assessment_date"],
         "faking_suspected": burnout["faking_detection"]["is_suspicious"],
     }
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# PAGE ROUTES
+# PAGE ROUTES (Server-Side Rendered)
 # ═════════════════════════════════════════════════════════════════════════════
 
 @app.route("/")
 def index():
-    """Serve the single-page application."""
+    """Root — landing page or redirect to dashboard."""
+    if "emp_id" in session:
+        if session.get("is_hr"):
+            return redirect(url_for("hr_dashboard"))
+        return redirect(url_for("dashboard"))
     return render_template("index.html")
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# AUTH ROUTES
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTH
+# ─────────────────────────────────────────────────────────────────────────────
 
-@app.route("/api/login", methods=["POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    """Employee login with emp ID. Also supports HR login."""
-    data = request.get_json()
-    emp_id = data.get("employee_id", "").strip().upper()
-    role_type = data.get("role", "employee")  # "employee" or "hr"
+    """Employee login page."""
+    if request.method == "POST":
+        emp_id = request.form.get("emp_id", "").strip().upper()
 
-    if not emp_id:
-        return jsonify({"error": "Employee ID is required"}), 400
+        if not emp_id:
+            return render_template("login.html", error="Please enter your Employee ID.")
+
+        employee = DATA["employees"].get(emp_id)
+        if not employee:
+            return render_template("login.html", error=f"Employee {emp_id} not found.")
+
+        # Store in session
+        session["emp_id"] = emp_id
+        session["is_hr"] = employee.get("is_hr", False)
+        DATA["sessions"][emp_id] = datetime.now().isoformat()
+
+        if employee.get("is_hr"):
+            return redirect(url_for("hr_dashboard"))
+        return redirect(url_for("dashboard"))
+
+    return render_template("login.html", error=None)
+
+
+@app.route("/logout")
+def logout():
+    """Clear session and redirect to login."""
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EMPLOYEE DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    """Employee's personal wellbeing dashboard."""
+    emp_id = session["emp_id"]
+    employee = DATA["employees"][emp_id]
+    burnout = get_employee_burnout(emp_id)
+    assessments = DATA["assessments"].get(emp_id, [])
+    work_logs = DATA["work_logs"].get(emp_id, [])[-4:]  # Last 4 weeks
+    hr_actions = DATA["hr_actions"].get(emp_id, [])  # HR actions for this employee
+
+    return render_template(
+        "dashboard.html",
+        employee=employee,
+        burnout=burnout,
+        assessments=assessments,
+        work_logs=work_logs,
+        hr_actions=hr_actions,
+        active_page="dashboard",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BURNOUT ASSESSMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/assessment", methods=["GET", "POST"])
+@login_required
+def assessment():
+    """Burnout assessment form and submission."""
+    emp_id = session["emp_id"]
+    employee = DATA["employees"][emp_id]
+
+    if request.method == "POST":
+        answers = {}
+        response_times = {}
+
+        for q in ASSESSMENT_QUESTIONS:
+            val = request.form.get(q["id"])
+            if val is None:
+                return render_template(
+                    "assesment.html",
+                    questions=ASSESSMENT_QUESTIONS,
+                    error="Please answer all questions.",
+                    active_page="assessment",
+                )
+            answers[q["id"]] = int(val)
+
+        # Create assessment record
+        assessment_record = {
+            "id": str(uuid.uuid4())[:8],
+            "employee_id": emp_id,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "answers": answers,
+            "response_times": response_times,
+            "is_fake_attempt": False,
+        }
+
+        # Store
+        if emp_id not in DATA["assessments"]:
+            DATA["assessments"][emp_id] = []
+        DATA["assessments"][emp_id].append(assessment_record)
+
+        # Compute updated burnout
+        burnout = get_employee_burnout(emp_id)
+
+        return render_template(
+            "assesment_result.html",
+            burnout=burnout,
+            employee=employee,
+            active_page="assessment",
+        )
+
+    # GET — show the assessment form
+    return render_template(
+        "assesment.html",
+        questions=ASSESSMENT_QUESTIONS,
+        error=None,
+        active_page="assessment",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PEER REPORT
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/peer-report", methods=["GET", "POST"])
+@login_required
+def peer_report():
+    """Submit a concern about a colleague."""
+    emp_id = session["emp_id"]
+    employee = DATA["employees"][emp_id]
+
+    # Get list of all employees except self for the dropdown
+    colleagues = [
+        {"id": e["id"], "name": e["name"], "department": e["department"]}
+        for e in DATA["employees"].values()
+        if e["id"] != emp_id
+    ]
+    colleagues.sort(key=lambda x: x["name"])
+
+    if request.method == "POST":
+        reported_id = request.form.get("reported_employee_id", "").strip().upper()
+        concern_type = request.form.get("concern_type", "other")
+        description = request.form.get("description", "").strip()
+        anonymous = request.form.get("anonymous") == "on"
+
+        # Validation
+        if not reported_id:
+            return render_template(
+                "peer_report.html", colleagues=colleagues,
+                error="Please select a colleague.", success=False,
+                active_page="peer_report",
+            )
+
+        reported = DATA["employees"].get(reported_id)
+        if not reported:
+            return render_template(
+                "peer_report.html", colleagues=colleagues,
+                error="Selected colleague not found.", success=False,
+                active_page="peer_report",
+            )
+
+        if not description:
+            return render_template(
+                "peer_report.html", colleagues=colleagues,
+                error="Please describe your concern.", success=False,
+                active_page="peer_report",
+            )
+
+        valid_types = ["workload", "burnout", "behavior_change", "health", "other"]
+        if concern_type not in valid_types:
+            concern_type = "other"
+
+        report = {
+            "id": str(uuid.uuid4())[:8],
+            "reporter_id": emp_id if not anonymous else "anonymous",
+            "reporter_name": employee["name"] if not anonymous else "Anonymous",
+            "reported_employee_id": reported_id,
+            "reported_employee_name": reported["name"],
+            "reported_department": reported["department"],
+            "concern_type": concern_type,
+            "description": description,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "status": "pending",
+            "anonymous": anonymous,
+        }
+        DATA["peer_reports"].append(report)
+
+        return render_template(
+            "peer_report.html", colleagues=colleagues,
+            error=None, success=True,
+            active_page="peer_report",
+        )
+
+    return render_template(
+        "peer_report.html", colleagues=colleagues,
+        error=None, success=False,
+        active_page="peer_report",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HR DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/hr")
+@hr_required
+def hr_dashboard():
+    """HR overview — all employees, risk distribution, peer reports."""
+    search_query = request.args.get("search", "").strip()
+    risk_filter = request.args.get("risk", "").strip()
+
+    # Build employee summaries
+    employees = []
+    risk_counts = {"low": 0, "moderate": 0, "high": 0, "critical": 0}
+    total_score = 0
+
+    for emp in DATA["employees"].values():
+        summary = employee_summary(emp)
+        risk_counts[summary["risk_level"]] = risk_counts.get(summary["risk_level"], 0) + 1
+        total_score += summary["burnout_score"]
+
+        # Apply filters
+        if search_query:
+            q = search_query.lower()
+            if (q not in summary["name"].lower()
+                    and q not in summary["id"].lower()
+                    and q not in summary["department"].lower()):
+                continue
+
+        if risk_filter and summary["risk_level"] != risk_filter:
+            continue
+
+        employees.append(summary)
+
+    employees.sort(key=lambda x: x["burnout_score"], reverse=True)
+
+    total = len(DATA["employees"])
+    avg_score = round(total_score / total, 1) if total > 0 else 0
+    at_risk = risk_counts.get("high", 0) + risk_counts.get("critical", 0)
+
+    # Risk distribution with percentages
+    risk_dist = {}
+    for level in ["low", "moderate", "high", "critical"]:
+        count = risk_counts.get(level, 0)
+        risk_dist[level] = {
+            "count": count,
+            "pct": round(count / total * 100, 1) if total > 0 else 0,
+        }
+
+    # Get peer reports
+    peer_reports = sorted(DATA["peer_reports"], key=lambda x: x["timestamp"], reverse=True)
+
+    return render_template(
+        "hr_dashboard.html",
+        employees=employees,
+        total=total,
+        avg_score=avg_score,
+        at_risk=at_risk,
+        risk_dist=risk_dist,
+        peer_reports=peer_reports,
+        search_query=search_query,
+        risk_filter=risk_filter,
+        active_page="hr",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HR EMPLOYEE DETAIL
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/hr/employee/<emp_id>")
+@hr_required
+def hr_employee_detail(emp_id):
+    """HR detailed view of a single employee."""
+    emp_id = emp_id.upper()
+    employee = DATA["employees"].get(emp_id)
+    if not employee:
+        flash("Employee not found.", "error")
+        return redirect(url_for("hr_dashboard"))
+
+    burnout = get_employee_burnout(emp_id)
+
+    # Add sentiment percentage breakdowns
+    sa = burnout.get("sentiment_analysis", {})
+    total_msgs = sa.get("total_messages", 0)
+    if total_msgs > 0:
+        sa["positive_pct"] = round(sa.get("positive_count", 0) / total_msgs * 100, 1)
+        sa["neutral_pct"] = round(sa.get("neutral_count", 0) / total_msgs * 100, 1)
+        sa["negative_pct"] = round(sa.get("negative_count", 0) / total_msgs * 100, 1)
+
+    actions = DATA["hr_actions"].get(emp_id, [])
+    peer_reports = [r for r in DATA["peer_reports"] if r["reported_employee_id"] == emp_id]
+    work_logs = DATA["work_logs"].get(emp_id, [])[-4:]  # Last 4 weeks
+
+    # Generate Safe Icebreakers (Ghostwritten Empathy)
+    icebreakers = []
+    first_name = employee.get("name", "").split()[0] if employee.get("name") else "there"
+
+    if burnout.get("masking_detection", {}).get("is_masking"):
+        icebreakers.append({
+            "title": "Addressing Emotional Masking",
+            "text": f"Hi {first_name}, just doing some routine check-ins this week. You always bring such great energy, but I want to make sure you're taking care of yourself too. How are things really going?"
+        })
+    elif burnout.get("breakdown", {}).get("sentiment", {}).get("score", 0) >= 60:
+        icebreakers.append({
+            "title": "Addressing Communication Shifts",
+            "text": f"Hi {first_name}, I wanted to proactively touch base. I want to ensure you have the support you need right now. Would you be open to a quick 10-minute chat when you're free?"
+        })
+
+    if burnout.get("breakdown", {}).get("work_pattern", {}).get("score", 0) >= 60:
+        icebreakers.append({
+            "title": "Addressing High Workload",
+            "text": f"Hey {first_name}, I know the team has been pushing really hard lately. I wanted to check in — do we need to shift some priorities or get you some extra coverage this week?"
+        })
+
+    if not icebreakers:
+        icebreakers.append({
+            "title": "Routine Wellness Check",
+            "text": f"Hi {first_name}, performing my monthly check-ins with the team! How are you feeling about your current bandwidth and projects?"
+        })
+        icebreakers.append({
+            "title": "Open Door Reminder",
+            "text": f"Hey {first_name}, hope you're having a good week. Just a quick reminder that my virtual door is always open if you ever need to chat about workload, team dynamics, or career growth."
+        })
+
+    return render_template(
+        "hr_employee.html",
+        employee=employee,
+        burnout=burnout,
+        icebreakers=icebreakers[:2],  # Provide top 2 contextually relevant icebreakers
+
+        actions=actions,
+        peer_reports=peer_reports,
+        work_logs=work_logs,
+        active_page="hr",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HR ACTION (form POST handler)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/hr/action", methods=["POST"])
+@hr_required
+def hr_action():
+    """Process an HR action form submission."""
+    emp_id = request.form.get("employee_id", "").strip().upper()
+    action_type = request.form.get("action_type", "")
+    details = request.form.get("details", "").strip()
 
     employee = DATA["employees"].get(emp_id)
     if not employee:
-        return jsonify({"error": f"Employee {emp_id} not found"}), 404
+        flash("Employee not found.", "error")
+        return redirect(url_for("hr_dashboard"))
 
-    # Store session
-    DATA["sessions"][emp_id] = datetime.now().isoformat()
+    if not details:
+        flash("Please provide action details.", "error")
+        return redirect(url_for("hr_employee_detail", emp_id=emp_id))
 
-    response = {
-        "success": True,
-        "employee": {
-            "id": employee["id"],
-            "name": employee["name"],
-            "email": employee["email"],
-            "department": employee["department"],
-            "role": employee["role"],
-        },
-        "login_as": role_type,
+    action = {
+        "id": str(uuid.uuid4())[:8],
+        "employee_id": emp_id,
+        "employee_name": employee["name"],
+        "action_type": action_type,
+        "details": details,
+        "hr_manager_id": session.get("emp_id", ""),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "status": "active",
     }
 
-    return jsonify(response)
+    if emp_id not in DATA["hr_actions"]:
+        DATA["hr_actions"][emp_id] = []
+    DATA["hr_actions"][emp_id].append(action)
+
+    flash(f"Action '{action_type.replace('_', ' ').title()}' recorded for {employee['name']}.", "success")
+    return redirect(url_for("hr_employee_detail", emp_id=emp_id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EMPLOYEE PROFILE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/profile")
+@login_required
+def profile():
+    """Employee profile and settings page."""
+    emp_id = session["emp_id"]
+    # Get the latest data from DATA structure (already injected by context processor, but good to be explicit for route logic)
+    employee = DATA["employees"].get(emp_id)
+    
+    return render_template(
+        "profile.html",
+        active_page="profile",
+        employee=employee
+    )
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# EMPLOYEE ROUTES
+# JSON API ROUTES (kept for completeness / API consumers)
 # ═════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/employees", methods=["GET"])
-def list_employees():
+def api_list_employees():
     """List all employees with burnout scores (HR view)."""
     department = request.args.get("department")
     risk_level = request.args.get("risk_level")
@@ -123,26 +542,18 @@ def list_employees():
     employees = []
     for emp in DATA["employees"].values():
         summary = employee_summary(emp)
-
-        # Apply filters
         if department and emp["department"] != department:
             continue
         if risk_level and summary["risk_level"] != risk_level:
             continue
-
         employees.append(summary)
 
-    # Sort by burnout score descending
     employees.sort(key=lambda x: x["burnout_score"], reverse=True)
-
-    return jsonify({
-        "employees": employees,
-        "total": len(employees),
-    })
+    return jsonify({"employees": employees, "total": len(employees)})
 
 
 @app.route("/api/employee/<emp_id>", methods=["GET"])
-def get_employee(emp_id):
+def api_get_employee(emp_id):
     """Get detailed burnout analysis for a single employee."""
     emp_id = emp_id.upper()
     employee = DATA["employees"].get(emp_id)
@@ -168,67 +579,43 @@ def get_employee(emp_id):
     })
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# ASSESSMENT ROUTES
-# ═════════════════════════════════════════════════════════════════════════════
-
 @app.route("/api/assessment/questions", methods=["GET"])
-def get_questions():
+def api_get_questions():
     """Get the list of burnout assessment questions."""
     return jsonify({
         "questions": ASSESSMENT_QUESTIONS,
-        "scale": {
-            "1": "Never",
-            "2": "Rarely",
-            "3": "Sometimes",
-            "4": "Often",
-            "5": "Always",
-        },
+        "scale": {"1": "Never", "2": "Rarely", "3": "Sometimes", "4": "Often", "5": "Always"},
         "total_questions": len(ASSESSMENT_QUESTIONS),
     })
 
 
 @app.route("/api/assessment/submit", methods=["POST"])
-def submit_assessment():
-    """Submit a burnout assessment for an employee.
-    
-    Expected JSON body:
-    {
-        "employee_id": "EMP001",
-        "answers": {"q1": 3, "q2": 4, ...},
-        "response_times": {"q1": 8.2, "q2": 5.1, ...}  // optional
-    }
-    """
+def api_submit_assessment():
+    """Submit a burnout assessment for an employee (API)."""
     data = request.get_json()
     emp_id = data.get("employee_id", "").strip().upper()
     answers = data.get("answers", {})
     response_times = data.get("response_times", {})
 
-    # Validation
     if not emp_id:
         return jsonify({"error": "Employee ID is required"}), 400
-
     employee = DATA["employees"].get(emp_id)
     if not employee:
         return jsonify({"error": "Employee not found"}), 404
-
     if not answers:
         return jsonify({"error": "Answers are required"}), 400
 
-    # Validate answer values
     for qid, value in answers.items():
         if not isinstance(value, int) or value < 1 or value > 5:
             return jsonify({"error": f"Answer for {qid} must be an integer between 1 and 5"}), 400
 
-    # Check for missing questions
     answered_ids = set(answers.keys())
     expected_ids = {q["id"] for q in ASSESSMENT_QUESTIONS}
     missing = expected_ids - answered_ids
     if missing:
         return jsonify({"error": f"Missing answers for: {', '.join(sorted(missing))}"}), 400
 
-    # Create assessment record
-    assessment = {
+    assessment_record = {
         "id": str(uuid.uuid4())[:8],
         "employee_id": emp_id,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -237,20 +624,16 @@ def submit_assessment():
         "is_fake_attempt": False,
     }
 
-    # Store assessment
     if emp_id not in DATA["assessments"]:
         DATA["assessments"][emp_id] = []
-    DATA["assessments"][emp_id].append(assessment)
+    DATA["assessments"][emp_id].append(assessment_record)
 
-    # Compute updated burnout score
     burnout = get_employee_burnout(emp_id)
-
-    # Generate alerts if needed
     alerts = generate_alerts(employee, burnout)
 
     return jsonify({
         "success": True,
-        "assessment_id": assessment["id"],
+        "assessment_id": assessment_record["id"],
         "burnout_score": burnout["adjusted_score"],
         "risk_level": burnout["risk_level"],
         "breakdown": burnout["breakdown"],
@@ -260,99 +643,22 @@ def submit_assessment():
     })
 
 
-@app.route("/api/assessment/history/<emp_id>", methods=["GET"])
-def assessment_history(emp_id):
-    """Get assessment history for an employee."""
-    emp_id = emp_id.upper()
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
-        return jsonify({"error": "Employee not found"}), 404
-
-    assessments = DATA["assessments"].get(emp_id, [])
-    history = []
-    for a in assessments:
-        score = compute_assessment_score(a["answers"])
-        history.append({
-            "id": a["id"],
-            "timestamp": a["timestamp"],
-            "score": score,
-        })
-
-    return jsonify({
-        "employee_id": emp_id,
-        "assessments": history,
-        "total": len(history),
-    })
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# WORK LOG ROUTES
-# ═════════════════════════════════════════════════════════════════════════════
-
-@app.route("/api/work-log/<emp_id>", methods=["GET"])
-def get_work_log(emp_id):
-    """Get work hours & productivity data for an employee."""
-    emp_id = emp_id.upper()
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
-        return jsonify({"error": "Employee not found"}), 404
-
-    logs = DATA["work_logs"].get(emp_id, [])
-
-    # Compute aggregates
-    if logs:
-        recent = logs[-4:] if len(logs) >= 4 else logs
-        avg_hours = round(sum(l["avg_daily_hours"] for l in recent) / len(recent), 1)
-        avg_weekend = round(sum(l["weekend_hours"] for l in recent) / len(recent), 1)
-        avg_tasks = round(sum(l["tasks_completed"] for l in recent) / len(recent), 1)
-        avg_late_nights = round(sum(l["late_night_sessions"] for l in recent) / len(recent), 1)
-    else:
-        avg_hours = avg_weekend = avg_tasks = avg_late_nights = 0
-
-    return jsonify({
-        "employee_id": emp_id,
-        "work_logs": logs,
-        "summary": {
-            "avg_daily_hours_recent": avg_hours,
-            "avg_weekend_hours_recent": avg_weekend,
-            "avg_tasks_completed_recent": avg_tasks,
-            "avg_late_nights_recent": avg_late_nights,
-            "total_weeks_tracked": len(logs),
-        },
-    })
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# SENTIMENT ANALYSIS ROUTES
-# ═════════════════════════════════════════════════════════════════════════════
-
 @app.route("/api/sentiment/<emp_id>", methods=["GET"])
-def get_sentiment(emp_id):
+def api_get_sentiment(emp_id):
     """Get sentiment analysis of an employee's communications."""
     emp_id = emp_id.upper()
     employee = DATA["employees"].get(emp_id)
     if not employee:
         return jsonify({"error": "Employee not found"}), 404
-
     messages = DATA["messages"].get(emp_id, [])
     analysis = analyze_messages(messages)
+    return jsonify({"employee_id": emp_id, "employee_name": employee["name"], "analysis": analysis})
 
-    return jsonify({
-        "employee_id": emp_id,
-        "employee_name": employee["name"],
-        "analysis": analysis,
-    })
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# HR ALERTS & DASHBOARD
-# ═════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/alerts", methods=["GET"])
-def get_alerts():
+def api_get_alerts():
     """Get all HR alerts for employees at risk."""
     all_alerts = []
-
     for emp in DATA["employees"].values():
         burnout = get_employee_burnout(emp["id"])
         emp_alerts = generate_alerts(emp, burnout)
@@ -363,265 +669,13 @@ def get_alerts():
             alert["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
             all_alerts.append(alert)
 
-    # Sort by severity
     severity_order = {"critical": 0, "high": 1, "warning": 2, "moderate": 3}
     all_alerts.sort(key=lambda x: severity_order.get(x.get("severity", "moderate"), 4))
+    return jsonify({"alerts": all_alerts, "total": len(all_alerts)})
 
-    return jsonify({
-        "alerts": all_alerts,
-        "total": len(all_alerts),
-    })
-
-
-@app.route("/api/dashboard/stats", methods=["GET"])
-def dashboard_stats():
-    """Get aggregate statistics for the HR dashboard."""
-    total = len(DATA["employees"])
-    risk_counts = {"low": 0, "moderate": 0, "high": 0, "critical": 0}
-    department_stats = {}
-    total_score = 0
-
-    for emp in DATA["employees"].values():
-        burnout = get_employee_burnout(emp["id"])
-        risk = burnout["risk_level"]
-        score = burnout["adjusted_score"]
-        dept = emp["department"]
-
-        risk_counts[risk] = risk_counts.get(risk, 0) + 1
-        total_score += score
-
-        if dept not in department_stats:
-            department_stats[dept] = {"total": 0, "total_score": 0, "high_risk": 0}
-        department_stats[dept]["total"] += 1
-        department_stats[dept]["total_score"] += score
-        if risk in ("high", "critical"):
-            department_stats[dept]["high_risk"] += 1
-
-    # Compute department averages
-    for dept in department_stats:
-        s = department_stats[dept]
-        s["avg_score"] = round(s["total_score"] / s["total"], 1) if s["total"] > 0 else 0
-
-    # Get peer reports count
-    total_peer_reports = len(DATA["peer_reports"])
-    unresolved_peer_reports = sum(1 for r in DATA["peer_reports"] if r.get("status") == "pending")
-
-    # Get total HR actions
-    total_hr_actions = sum(len(v) for v in DATA["hr_actions"].values())
-
-    return jsonify({
-        "total_employees": total,
-        "avg_burnout_score": round(total_score / total, 1) if total > 0 else 0,
-        "risk_distribution": risk_counts,
-        "at_risk_count": risk_counts.get("high", 0) + risk_counts.get("critical", 0),
-        "department_stats": department_stats,
-        "total_peer_reports": total_peer_reports,
-        "unresolved_peer_reports": unresolved_peer_reports,
-        "total_hr_actions": total_hr_actions,
-        "departments": list(department_stats.keys()),
-    })
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# HR ACTIONS (Reduce Workload, Time Off, etc.)
-# ═════════════════════════════════════════════════════════════════════════════
-
-@app.route("/api/hr-action", methods=["POST"])
-def create_hr_action():
-    """Create an HR action for an employee.
-    
-    Expected JSON body:
-    {
-        "employee_id": "EMP001",
-        "action_type": "reduce_workload" | "time_off" | "counseling" | "task_redistribution" | "schedule_1on1",
-        "details": "Description of the action taken",
-        "hr_manager_id": "EMP010"  // the HR person taking action
-    }
-    """
-    data = request.get_json()
-    emp_id = data.get("employee_id", "").strip().upper()
-    action_type = data.get("action_type", "")
-    details = data.get("details", "")
-    hr_manager_id = data.get("hr_manager_id", "")
-
-    # Validation
-    if not emp_id:
-        return jsonify({"error": "Employee ID is required"}), 400
-
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
-        return jsonify({"error": "Employee not found"}), 404
-
-    valid_actions = [
-        "reduce_workload", "time_off", "counseling",
-        "task_redistribution", "schedule_1on1", "immediate_intervention", "other"
-    ]
-    if action_type not in valid_actions:
-        return jsonify({"error": f"Invalid action type. Must be one of: {', '.join(valid_actions)}"}), 400
-
-    action = {
-        "id": str(uuid.uuid4())[:8],
-        "employee_id": emp_id,
-        "employee_name": employee["name"],
-        "action_type": action_type,
-        "details": details,
-        "hr_manager_id": hr_manager_id,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "status": "active",
-    }
-
-    if emp_id not in DATA["hr_actions"]:
-        DATA["hr_actions"][emp_id] = []
-    DATA["hr_actions"][emp_id].append(action)
-
-    return jsonify({
-        "success": True,
-        "action": action,
-        "message": f"HR action '{action_type}' created for {employee['name']}.",
-    })
-
-
-@app.route("/api/hr-actions/<emp_id>", methods=["GET"])
-def get_hr_actions(emp_id):
-    """Get all HR actions for a specific employee."""
-    emp_id = emp_id.upper()
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
-        return jsonify({"error": "Employee not found"}), 404
-
-    actions = DATA["hr_actions"].get(emp_id, [])
-
-    return jsonify({
-        "employee_id": emp_id,
-        "employee_name": employee["name"],
-        "actions": actions,
-        "total": len(actions),
-    })
-
-
-@app.route("/api/hr-action/<action_id>/complete", methods=["POST"])
-def complete_hr_action(action_id):
-    """Mark an HR action as completed."""
-    for emp_id, actions in DATA["hr_actions"].items():
-        for action in actions:
-            if action["id"] == action_id:
-                action["status"] = "completed"
-                action["completed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                return jsonify({"success": True, "action": action})
-
-    return jsonify({"error": "Action not found"}), 404
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# PEER REPORTING
-# ═════════════════════════════════════════════════════════════════════════════
-
-@app.route("/api/peer-report", methods=["POST"])
-def submit_peer_report():
-    """Submit a peer concern report for a co-worker.
-    
-    Expected JSON body:
-    {
-        "reporter_id": "EMP005",
-        "reported_employee_id": "EMP003",
-        "concern_type": "workload" | "burnout" | "behavior_change" | "health" | "other",
-        "description": "I've noticed my colleague working very late...",
-        "anonymous": true/false
-    }
-    """
-    data = request.get_json()
-    reporter_id = data.get("reporter_id", "").strip().upper()
-    reported_id = data.get("reported_employee_id", "").strip().upper()
-    concern_type = data.get("concern_type", "other")
-    description = data.get("description", "").strip()
-    anonymous = data.get("anonymous", True)
-
-    # Validation
-    if not reporter_id or not reported_id:
-        return jsonify({"error": "Both reporter and reported employee IDs are required"}), 400
-
-    if reporter_id == reported_id:
-        return jsonify({"error": "You cannot report yourself. Please use the assessment instead."}), 400
-
-    reporter = DATA["employees"].get(reporter_id)
-    reported = DATA["employees"].get(reported_id)
-
-    if not reporter:
-        return jsonify({"error": f"Reporter {reporter_id} not found"}), 404
-    if not reported:
-        return jsonify({"error": f"Employee {reported_id} not found"}), 404
-
-    if not description:
-        return jsonify({"error": "Please provide a description of your concern"}), 400
-
-    valid_types = ["workload", "burnout", "behavior_change", "health", "other"]
-    if concern_type not in valid_types:
-        concern_type = "other"
-
-    report = {
-        "id": str(uuid.uuid4())[:8],
-        "reporter_id": reporter_id if not anonymous else "anonymous",
-        "reporter_name": reporter["name"] if not anonymous else "Anonymous",
-        "reported_employee_id": reported_id,
-        "reported_employee_name": reported["name"],
-        "reported_department": reported["department"],
-        "concern_type": concern_type,
-        "description": description,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "status": "pending",
-        "anonymous": anonymous,
-    }
-
-    DATA["peer_reports"].append(report)
-
-    return jsonify({
-        "success": True,
-        "report_id": report["id"],
-        "message": "Your concern has been submitted to HR. Thank you for looking out for your colleague.",
-    })
-
-
-@app.route("/api/peer-reports", methods=["GET"])
-def get_peer_reports():
-    """Get all peer concern reports (HR view)."""
-    status_filter = request.args.get("status")
-
-    reports = DATA["peer_reports"]
-
-    if status_filter:
-        reports = [r for r in reports if r["status"] == status_filter]
-
-    # Sort by timestamp (newest first)
-    reports.sort(key=lambda x: x["timestamp"], reverse=True)
-
-    return jsonify({
-        "reports": reports,
-        "total": len(reports),
-    })
-
-
-@app.route("/api/peer-report/<report_id>/resolve", methods=["POST"])
-def resolve_peer_report(report_id):
-    """Mark a peer report as resolved."""
-    data = request.get_json() or {}
-    resolution = data.get("resolution", "Addressed by HR")
-
-    for report in DATA["peer_reports"]:
-        if report["id"] == report_id:
-            report["status"] = "resolved"
-            report["resolution"] = resolution
-            report["resolved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-            return jsonify({"success": True, "report": report})
-
-    return jsonify({"error": "Report not found"}), 404
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# DEPARTMENTS
-# ═════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/departments", methods=["GET"])
-def get_departments():
+def api_get_departments():
     """Get list of all departments."""
     departments = set(emp["department"] for emp in DATA["employees"].values())
     return jsonify({"departments": sorted(departments)})
@@ -631,11 +685,22 @@ def get_departments():
 # RUN SERVER
 # ═════════════════════════════════════════════════════════════════════════════
 
+@app.route("/css")
+def serve_css():
+    """Fallback: serve CSS directly."""
+    css_path = os.path.join(BASE_DIR, "static", "style.css")
+    with open(css_path, "r", encoding="utf-8") as f:
+        css = f.read()
+    from flask import Response
+    return Response(css, mimetype="text/css")
+
+
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print("  Employee Burnout Prediction & Monitoring System")
+    print("  BurnShield -- Employee Burnout Prediction & Monitoring")
     print("=" * 60)
     print(f"  Loaded {len(DATA['employees'])} employees")
-    print(f"  Server starting at http://localhost:5000")
+    print(f"  Static folder: {app.static_folder}")
+    print(f"  Server starting at http://localhost:5050")
     print("=" * 60 + "\n")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5050)

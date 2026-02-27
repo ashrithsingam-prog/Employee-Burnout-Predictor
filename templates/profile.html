@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}My Profile — BurnShield{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem;">
+    <div class="eyebrow"><span class="eyebrow-line"></span>Account Settings<span class="eyebrow-line"></span></div>
+    <h1>My <em>Profile</em></h1>
+    <p>Manage your account details and view your employee information.</p>
+</div>
+
+<div class="grid-sidebar">
+    <!-- LEFT SIDEBAR -->
+    <div>
+        <div class="card profile-card" style="margin-bottom: 1.5rem">
+            <div class="profile-avatar" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                {{ current_employee.name[0] }}
+            </div>
+            <div class="profile-name" style="font-size: 1.4rem;">{{ current_employee.name }}</div>
+            <div class="profile-role" style="font-size: 1rem; color: var(--blue);">{{ current_employee.role }}</div>
+
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border)">
+                <div class="profile-stat"><span>Employee ID</span> <span
+                        style="font-family: monospace; color: var(--ink)">{{ current_employee.id }}</span></div>
+                <div class="profile-stat"><span>Department</span> <span style="color: var(--ink)">{{
+                        current_employee.department }}</span></div>
+                <div class="profile-stat"><span>Join Date</span> <span style="color: var(--ink)">{{
+                        current_employee.join_date }}</span></div>
+            </div>
+        </div>
+
+        <div class="card list-group">
+            <a href="#" class="list-item" style="color: var(--blue)">
+                <span class="item-icon">👤</span> Personal Info
+            </a>
+            <a href="#" class="list-item">
+                <span class="item-icon">🔔</span> Notifications
+            </a>
+            <a href="#" class="list-item">
+                <span class="item-icon">⚙️</span> Preferences
+            </a>
+            <a href="#" class="list-item">
+                <span class="item-icon">🔒</span> Security
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div>
+        <div class="card" style="margin-bottom: 1.5rem">
+            <div class="card-header">Contact Information</div>
+            <form style="display: flex; flex-direction: column; gap: 1.2rem; margin-top: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Full Name</label>
+                    <input type="text" value="{{ current_employee.name }}" readonly
+                        style="background: var(--surface2); color: var(--ink2); cursor: not-allowed">
+                    <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem">Name changes must be
+                        processed through HR directly.</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Work Email</label>
+                    <input type="email" value="{{ current_employee.email }}" readonly
+                        style="background: var(--surface2); color: var(--ink2); cursor: not-allowed">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Manager</label>
+                    <input type="text" value="{{ current_employee.manager_id }}" readonly
+                        style="background: var(--surface2); color: var(--ink2); cursor: not-allowed">
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="color: var(--amber)">Data Privacy & Sharing</div>
+            <p style="font-size: 0.82rem; color: var(--ink2); margin-bottom: 1.2rem; line-height: 1.6">
+                BurnShield analyzes your work patterns (Slack, Jira, Email volume) and self-reported assessments to
+                predict burnout risk.
+                Your raw messages are <strong>never</strong> readable by HR. Only an aggregated sentiment score and
+                generated alerts are shared.
+            </p>
+
+            <div
+                style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.9rem; color: var(--ink)">Anonymous Peer Reporting</div>
+                    <div style="font-size: 0.75rem; color: var(--muted)">Allow colleagues to submit anonymous concern
+                        reports for you.</div>
+                </div>
+                <div class="badge badge-green" style="padding: 0.3rem 0.6rem">Enabled</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

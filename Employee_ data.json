@@ -1,0 +1,85 @@
+{
+  "employees": [
+    {
+      "employee_id": "EMP001",
+      "name": "Sarah Jenkins",
+      "profile_type": "The Honest Burnout",
+      "survey_burnout_score": 85,
+      "metadata": {
+        "weekly_hours_logged": 62,
+        "tasks_assigned": 15,
+        "tasks_completed": 8
+      },
+      "recent_slack_messages": [
+        "I can't take on any more tickets right now, I'm completely underwater.",
+        "Did anyone even look at the doc I sent at 2 AM?",
+        "I'll try to get to it, but I'm exhausted."
+      ]
+    },
+    {
+      "employee_id": "EMP002",
+      "name": "David Chen",
+      "profile_type": "The Faker (Hidden Burnout)",
+      "survey_burnout_score": 10,
+      "metadata": {
+        "weekly_hours_logged": 75,
+        "tasks_assigned": 20,
+        "tasks_completed": 6
+      },
+      "recent_slack_messages": [
+        "Everything is great! Happy to help!",
+        "No worries at all, I'll work through the weekend to finish it.",
+        "Just grabbing another coffee, all good here! 👍"
+      ]
+    },
+    {
+      "employee_id": "EMP003",
+      "name": "Priya Sharma",
+      "profile_type": "The Healthy Performer",
+      "survey_burnout_score": 15,
+      "metadata": {
+        "weekly_hours_logged": 42,
+        "tasks_assigned": 12,
+        "tasks_completed": 12
+      },
+      "recent_slack_messages": [
+        "PR is merged! Have a great evening everyone.",
+        "I have some bandwidth this afternoon if anyone needs a code review.",
+        "Thanks for the feedback, I'll update the design document tomorrow morning."
+      ]
+    },
+    {
+      "employee_id": "EMP004",
+      "name": "Marcus Johnson",
+      "profile_type": "The Quiet Quitter",
+      "survey_burnout_score": 20,
+      "metadata": {
+        "weekly_hours_logged": 35,
+        "tasks_assigned": 10,
+        "tasks_completed": 3
+      },
+      "recent_slack_messages": [
+        "Ok.",
+        "I don't know, ask Sarah.",
+        "Logging off."
+      ]
+    },
+    {
+      "employee_id": "EMP005",
+      "name": "Alex Rivera",
+      "profile_type": "Overworked but Coping",
+      "survey_burnout_score": 55,
+      "metadata": {
+        "weekly_hours_logged": 50,
+        "tasks_assigned": 14,
+        "tasks_completed": 13
+      },
+      "recent_slack_messages": [
+        "It's been a busy week, but we're almost at the finish line.",
+        "Could we push the deadline on this by one day? Just need a bit more time to test.",
+        "Good work on the deployment today team."
+      ]
+    }
+  ]
+}
+

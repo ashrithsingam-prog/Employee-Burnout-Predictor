@@ -24,14 +24,14 @@ ROLES = {
 }
 
 FIRST_NAMES = [
-    "Ashrith", "Amogh", "Diddy", "Sneha", "Vikram", "Ananya", "Rohan", "Kavya",
+    "Aarav", "Priya", "Rahul", "Sneha", "Vikram", "Ananya", "Rohan", "Kavya",
     "Arjun", "Meera", "Aditya", "Ishita", "Karan", "Pooja", "Nikhil", "Divya",
     "Siddharth", "Nisha", "Amit", "Riya"
 ]
 
 LAST_NAMES = [
     "Sharma", "Patel", "Verma", "Kumar", "Singh", "Gupta", "Reddy", "Nair",
-    "Joshi", "Mehta", "Chopra", "Sarvak", "Bhat", "Iyer", "Rao", "Das",
+    "Joshi", "Mehta", "Chopra", "Malhotra", "Bhat", "Iyer", "Rao", "Das",
     "Chauhan", "Pillai", "Banerjee", "Kulkarni"
 ]
 
@@ -175,9 +175,13 @@ def generate_employee_id(index):
 
 
 def generate_employees(count=20):
-    """Generate a list of mock employees with varied burnout profiles."""
+    """Generate a list of mock employees with varied burnout profiles.
+    EMP001-015 = Regular Employees, EMP016-020 = HR Managers.
+    """
     employees = []
     used_names = set()
+
+    HR_ROLES_LIST = ["HR Manager", "Senior HR Manager", "HR Director", "HR Business Partner", "Chief People Officer"]
 
     # Assign burnout profiles: ~30% healthy, ~40% at-risk, ~30% burnout
     profiles = (
@@ -197,8 +201,15 @@ def generate_employees(count=20):
                 used_names.add(full_name)
                 break
 
-        dept = random.choice(DEPARTMENTS)
-        role = random.choice(ROLES[dept])
+        is_hr = i >= 16  # EMP016-020 are HR managers
+
+        if is_hr:
+            dept = "HR"
+            role = HR_ROLES_LIST[(i - 16) % len(HR_ROLES_LIST)]
+        else:
+            dept = random.choice([d for d in DEPARTMENTS if d != "HR"])
+            role = random.choice(ROLES.get(dept, ["Employee"]))
+
         profile = profiles[i - 1] if i - 1 < len(profiles) else random.choice(profiles)
 
         emp = {
@@ -207,6 +218,7 @@ def generate_employees(count=20):
             "email": f"{first.lower()}.{last.lower()}@company.com",
             "department": dept,
             "role": role,
+            "is_hr": is_hr,
             "profile": profile,  # hidden from frontend — used for data generation
             "join_date": (datetime.now() - timedelta(days=random.randint(180, 1800))).strftime("%Y-%m-%d"),
             "manager": f"MGR{str(random.randint(1, 5)).zfill(3)}",
@@ -379,8 +391,30 @@ def generate_assessment_history(employee, weeks=6):
     return assessments
 
 
+def generate_clean_work_logs(employee, weeks=8):
+    """Generate clean/normal work logs so employees start with ~0 burnout."""
+    logs = []
+    today = datetime.now()
+    for week in range(weeks, 0, -1):
+        week_start = today - timedelta(weeks=week)
+        logs.append({
+            "employee_id": employee["id"],
+            "week_start": week_start.strftime("%Y-%m-%d"),
+            "avg_daily_hours": round(random.uniform(7.5, 8.5), 1),
+            "weekend_hours": 0.0,
+            "total_weekly_hours": round(random.uniform(37.5, 42.5), 1),
+            "tasks_completed": random.randint(10, 14),
+            "tasks_assigned": random.randint(10, 15),
+            "late_night_sessions": 0,
+            "breaks_taken_per_day": random.randint(3, 5),
+            "days_absent": 0,
+            "pto_balance_days": random.randint(14, 20),
+        })
+    return logs
+
+
 def generate_all_data(employee_count=20):
-    """Generate complete mock dataset."""
+    """Generate complete mock dataset — employees start at 0 burnout (no assessments)."""
     employees = generate_employees(employee_count)
 
     all_work_logs = {}
@@ -390,7 +424,7 @@ def generate_all_data(employee_count=20):
     for emp in employees:
         all_work_logs[emp["id"]] = generate_work_logs(emp)
         all_messages[emp["id"]] = generate_messages(emp)
-        all_assessments[emp["id"]] = generate_assessment_history(emp)
+        all_assessments[emp["id"]] = []     # No pre-loaded assessments — start at 0
 
     return {
         "employees": employees,

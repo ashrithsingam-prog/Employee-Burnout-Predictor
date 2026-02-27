@@ -1,0 +1,129 @@
+import streamlit as st
+from wellbeing_system import WellbeingAssessment, WellbeingEngine, Outcome
+
+engine = WellbeingEngine()
+
+st.set_page_config(page_title="Wellbeing Companion", page_icon="💙")
+
+# ---------- SESSION STATE ----------
+
+if "stage" not in st.session_state:
+    st.session_state.stage = "welcome"
+
+if "first_result" not in st.session_state:
+    st.session_state.first_result = None
+
+
+# ---------- WELCOME PAGE ----------
+
+if st.session_state.stage == "welcome":
+    st.title("💙 Employee Wellbeing Check")
+    st.write("This is a private emotional wellbeing check.")
+
+    if st.button("Start Fortnight Check"):
+        st.session_state.stage = "first_test"
+
+
+# ---------- FIRST TEST ----------
+
+elif st.session_state.stage == "first_test":
+    st.header("📝 First Wellbeing Check")
+
+    exhaustion = st.slider("How emotionally exhausted do you feel?", 0, 10)
+    motivation = st.slider("How motivated do you feel?", 0, 10)
+    satisfaction = st.slider("How satisfied are you with work?", 0, 10)
+    overwhelm = st.slider("How overwhelmed do you feel?", 0, 10)
+
+    if st.button("Submit First Check"):
+        first = WellbeingAssessment(exhaustion, motivation, satisfaction, overwhelm)
+        result = engine.evaluate(first)
+
+        st.session_state.first_result = first
+
+        if result.outcome == Outcome.SELF_HELP:
+            st.session_state.stage = "self_help"
+
+        elif result.outcome == Outcome.MONITOR:
+            st.session_state.stage = "monitor"
+
+        else:
+            st.session_state.stage = "second_test"
+
+
+# ---------- SECOND TEST ----------
+
+elif st.session_state.stage == "second_test":
+    st.header("🔁 Follow-Up Check")
+
+    st.write("We’d like to understand your wellbeing better.")
+
+    exhaustion = st.slider("Has your exhaustion persisted?", 0, 10)
+    motivation = st.slider("Has motivation dropped?", 0, 10)
+    satisfaction = st.slider("Has satisfaction reduced?", 0, 10)
+    overwhelm = st.slider("Has overwhelm increased?", 0, 10)
+
+    if st.button("Submit Follow-Up"):
+        second = WellbeingAssessment(exhaustion, motivation, satisfaction, overwhelm)
+        result = engine.evaluate(st.session_state.first_result, second)
+
+        if result.outcome == Outcome.COUNSELLOR:
+            st.session_state.stage = "counsellor"
+
+        elif result.outcome == Outcome.URGENT_SUPPORT:
+            st.session_state.stage = "urgent"
+
+        else:
+            st.session_state.stage = "monitor"
+
+
+# ---------- SELF HELP ----------
+
+elif st.session_state.stage == "self_help":
+    st.success("You seem to be doing well 💚")
+
+    st.write("Here are some self-care suggestions:")
+    st.write("- Take short breaks")
+    st.write("- Stay hydrated")
+    st.write("- Maintain work-life balance")
+
+    if st.button("Restart"):
+        st.session_state.stage = "welcome"
+
+
+# ---------- MONITOR ----------
+
+elif st.session_state.stage == "monitor":
+    st.warning("We recommend monitoring your wellbeing.")
+
+    st.write("Consider:")
+    st.write("- Reflecting on workload")
+    st.write("- Taking rest")
+    st.write("- Speaking to someone you trust")
+
+    if st.button("Restart"):
+        st.session_state.stage = "welcome"
+
+
+# ---------- COUNSELLOR ----------
+
+elif st.session_state.stage == "counsellor":
+    st.error("We suggest speaking with a counsellor 💬")
+
+    st.write("Would you like support?")
+
+    if st.button("Request Counsellor Support"):
+        st.success("A counsellor will reach out to you privately.")
+
+    if st.button("Restart"):
+        st.session_state.stage = "welcome"
+
+
+# ---------- URGENT ----------
+
+elif st.session_state.stage == "urgent":
+    st.error("⚠️ We recommend urgent wellbeing support.")
+
+    st.write("Please consider reaching out to professional help.")
+
+    if st.button("Restart"):
+        st.session_state.stage = "welcome"

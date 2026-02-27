@@ -360,10 +360,31 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
     """Compute the final composite burnout score for an employee.
     
     Returns a detailed breakdown dict.
+    If no assessment has been taken, returns 0% burnout.
     """
+    # If no assessment taken yet, return 0 — employee hasn't been tested
+    if not assessments:
+        sentiment_analysis = analyze_messages(messages)
+        return {
+            "employee_id": employee_id,
+            "composite_score": 0,
+            "adjusted_score": 0,
+            "risk_level": "low",
+            "breakdown": {
+                "assessment": {"score": 0, "weight": WEIGHTS["assessment"]},
+                "sentiment": {"score": 0, "weight": WEIGHTS["sentiment"]},
+                "work_pattern": {"score": 0, "weight": WEIGHTS["work_pattern"]},
+                "productivity": {"score": 0, "weight": WEIGHTS["productivity"]},
+            },
+            "sentiment_analysis": sentiment_analysis,
+            "faking_detection": {"is_suspicious": False, "confidence": 0, "reasons": []},
+            "assessment_trend": [],
+            "last_assessment_date": None,
+        }
+
     # Get most recent assessment
-    latest_assessment = assessments[-1] if assessments else None
-    assessment_answers = latest_assessment["answers"] if latest_assessment else {}
+    latest_assessment = assessments[-1]
+    assessment_answers = latest_assessment["answers"]
 
     # Compute individual scores
     assessment_score = compute_assessment_score(assessment_answers)
@@ -387,7 +408,6 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
     # If faking detected, adjust score upward using objective data
     adjusted_score = composite
     if faking_result["is_suspicious"]:
-        # Use objective data more heavily
         objective_score = (
             sentiment_score * 0.40
             + work_score * 0.35
@@ -421,7 +441,7 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
         "sentiment_analysis": sentiment_analysis,
         "faking_detection": faking_result,
         "assessment_trend": assessment_trend,
-        "last_assessment_date": latest_assessment["timestamp"] if latest_assessment else None,
+        "last_assessment_date": latest_assessment["timestamp"],
     }
 
 

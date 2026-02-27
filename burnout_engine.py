@@ -15,10 +15,10 @@ from mock_data import ASSESSMENT_QUESTIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
 WEIGHTS = {
-    "assessment": 0.60,   # Latest test answers carry the most weight
-    "sentiment": 0.15,    # Communication tone (supporting signal)
-    "work_pattern": 0.15, # Work hours/patterns (supporting signal)
-    "productivity": 0.10, # Task completion trends (minor signal)
+    "assessment": 0.75,   # Latest test answers carry the most weight
+    "sentiment": 0.10,    # Communication tone (supporting signal)
+    "work_pattern": 0.10, # Work hours/patterns (supporting signal)
+    "productivity": 0.05, # Task completion trends (minor signal)
 }
 
 # Thresholds
@@ -140,13 +140,14 @@ def compute_assessment_score(answers):
     """Compute burnout percentage from assessment answers (0-100).
     Higher = more burnout.
     
-    Reverse-scores personal accomplishment and support questions.
+    Burnout-indicating categories (exhaustion, detachment, physical)
+    are weighted 3x more than positive categories (accomplishment, support).
     """
     if not answers:
-        return 50  # default mid-range if no assessment
+        return 0  # No assessment taken yet = 0 burnout
 
-    total = 0
-    count = 0
+    weighted_total = 0
+    total_weight = 0
 
     for q in ASSESSMENT_QUESTIONS:
         qid = q["id"]
@@ -155,14 +156,18 @@ def compute_assessment_score(answers):
             # Reverse score for positive categories
             if q["category"] in ("personal_accomplishment", "support"):
                 score = 6 - score  # invert: 5→1, 1→5
-            total += score
-            count += 1
+                weight = 1.0  # Lower weight for positive categories
+            else:
+                weight = 3.0  # Higher weight for burnout indicators
+            
+            weighted_total += score * weight
+            total_weight += weight
 
-    if count == 0:
-        return 50
+    if total_weight == 0:
+        return 0
 
     # Normalize to 0-100
-    raw = total / count  # 1 to 5
+    raw = weighted_total / total_weight  # 1 to 5
     normalized = ((raw - 1) / 4) * 100  # 0 to 100
     return round(normalized, 1)
 

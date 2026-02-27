@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Assessment Results{% endblock %}
+
+
+
+{% block content %}
+
+<div class="container fade-up" style="padding-top:3rem">
+
+    <!-- Result Header -->
+
+    {% set score = burnout.adjusted_score %}
+
+    {% set wellness = 100 - score %}
+
+    {% if score < 35 %} {% set result_color="var(--green)" %} {% set result_bg="var(--green-bg)" %} {% set
+
+        result_title="🌿 You're doing well!" %} {% set
+
+        result_msg="Your responses indicate a healthy state. Keep nurturing these habits — self-help resources are available anytime."
+
+        %} {% elif score < 65 %} {% set result_color="var(--amber)" %} {% set result_bg="var(--amber-bg)" %} {% set
+
+        result_title="⚠️ Some stress signals detected" %} {% set
+
+        result_msg="Your responses suggest moderate stress in some areas. Consider exploring mindfulness resources or speaking with someone you trust."
+
+        %} {% else %} {% set result_color="var(--red)" %} {% set result_bg="var(--red-bg)" %} {% set
+
+        result_title="🧡 Significant stress — support is available" %} {% set
+
+        result_msg="High stress detected across multiple areas. You don't have to handle this alone. Consider speaking with a counsellor — it's private, voluntary, and support-focused."
+
+        %} {% endif %} <div class="result-card" style="border-top:4px solid {{ result_color }}">
+
+        <!-- Overall Ring -->
+
+        {% set circ = 364.4 %}
+
+        {% set offset = circ - (score / 100) * circ %}
+
+        <div class="wellness-ring" style="width:160px;height:160px;margin-bottom:1.5rem">
+
+            <svg viewBox="0 0 130 130">
+
+                <circle class="bg" cx="65" cy="65" r="58" />
+
+                <circle class="fill" cx="65" cy="65" r="58" stroke="{{ result_color }}" stroke-dasharray="{{ circ }}"
+
+                    stroke-dashoffset="{{ offset }}" />
+
+            </svg>
+
+            <div class="label">
+
+                <span class="val" style="color:{{ result_color }}">{{ score|round|int }}%</span>
+
+                <span class="sub">Burnout Score</span>
+
+            </div>
+
+        </div>
+
+
+
+        <h2 style="color:{{ result_color }}">{{ result_title }}</h2>
+
+        <p style="margin-top:.5rem">{{ result_msg }}</p>
+
+
+
+        <div style="margin-top:1rem">
+
+            <span
+
+                class="badge badge-lg {% if score < 35 %}badge-green{% elif score < 65 %}badge-amber{% else %}badge-red{% endif %}">
+
+                {{ burnout.risk_level|upper }} RISK
+
+            </span>
+
+        </div>
+
+</div>
+
+
+
+<!-- Score Breakdown -->
+
+<div class="card mt-3">
+
+    <div class="card-header">📊 Detailed Score Breakdown</div>
+
+    {% set bd = burnout.breakdown %}
+
+
+
+    {% set dim_icons = {'assessment': '📝', 'sentiment': '💬', 'work_pattern': '⏰', 'productivity': '📈'} %}
+
+    {% set dim_labels = {'assessment': 'Assessment Score', 'sentiment': 'Sentiment Analysis', 'work_pattern': 'Work
+
+    Patterns', 'productivity': 'Productivity'} %}
+
+
+
+    {% for key in ['assessment', 'sentiment', 'work_pattern', 'productivity'] %}
+
+    {% set s = bd[key].score %}
+
+    {% set w = (bd[key].weight * 100)|int %}
+
+    {% if s <= 25 %}{% set color="var(--green)" %}{% set tag="Low" %} {% elif s <=50 %}{% set color="var(--blue)" %}{%
+
+        set tag="Moderate" %} {% elif s <=75 %}{% set color="var(--amber)" %}{% set tag="Elevated" %} {% else %}{% set
+
+        color="var(--red)" %}{% set tag="High" %}{% endif %} <div class="meter">
+
+        <div class="meter-head">
+
+            <span class="meter-icon">{{ dim_icons[key] }}</span>
+
+            <span class="meter-label">{{ dim_labels[key] }} <span
+
+                    style="font-size:.72rem;color:var(--muted2);font-weight:400">({{ w }}% weight)</span></span>
+
+            <span class="meter-pct" style="color:{{ color }}">{{ s|round|int }}%</span>
+
+            <span class="meter-tag" style="background:{{ color }}15;color:{{ color }};border-color:{{ color }}30">{{ tag
+
+                }}</span>
+
+        </div>
+
+        <div class="meter-track">
+
+            <div class="meter-fill" style="width:{{ s }}%;background:{{ color }}"></div>
+
+        </div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+
+
+<!-- Faking Detection -->
+
+{% if burnout.faking_detection.is_suspicious %}
+
+<div class="info-strip danger mt-2">
+
+    <strong>⚠️ Consistency Check:</strong> Our system detected some inconsistencies between your test answers and
+
+    objective data (communication patterns, work hours). The score has been adjusted to ensure accuracy. Confidence: {{
+
+    burnout.faking_detection.confidence|round|int }}%.
+
+</div>
+
+{% endif %}
+
+
+
+<!-- Actions -->
+
+<div class="result-actions mt-3">
+
+    <a href="{{ url_for('assessment') }}" class="btn btn-outline">Retake Assessment</a>
+
+    {% if session.is_hr %}
+
+    <a href="{{ url_for('hr_dashboard') }}" class="btn btn-secondary">Back to HR Dashboard</a>
+
+    {% else %}
+
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+
+    {% endif %}
+
+</div>
+
+</div>
+
+{% endblock %} This is Assesment_result.html

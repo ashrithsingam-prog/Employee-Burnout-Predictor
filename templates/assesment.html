@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Burnout Assessment{% endblock %}
+
+
+
+{% block content %}
+
+<div class="page-header fade-up">
+
+    <div class="eyebrow"><span class="eyebrow-line"></span>Self-Assessment<span class="eyebrow-line"></span></div>
+
+    <h1>Wellbeing <em>Assessment</em></h1>
+
+    <p>Answer each question honestly. There are no right or wrong answers — this helps identify burnout patterns.</p>
+
+</div>
+
+
+
+<div class="container fade-up">
+
+    {% if error %}
+
+    <div class="form-error">{{ error }}</div>
+
+    {% endif %}
+
+
+
+    <div class="info-strip mb-3">
+
+        <strong>📋 {{ questions|length }} questions</strong> · Scale: 1 (Never) to 5 (Always) · Takes about 3 minutes ·
+
+        Your answers are confidential.
+
+    </div>
+
+
+
+    <form method="POST" action="{{ url_for('assessment') }}">
+
+        {% for q in questions %}
+
+        <div class="question-card">
+
+            <div class="question-num">{{ loop.index }}</div>
+
+            <div class="question-text">{{ q.question }}</div>
+
+            <div class="question-category">{{ q.category|replace('_', ' ') }}</div>
+
+            <div class="answer-scale">
+
+                {% set labels = ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] %}
+
+                {% for val in range(1, 6) %}
+
+                <label class="scale-option">
+
+                    <input type="radio" name="{{ q.id }}" value="{{ val }}" required>
+
+                    <span class="scale-label">
+
+                        <span class="scale-value">{{ val }}</span>
+
+                        <span class="scale-text">{{ labels[val - 1] }}</span>
+
+                    </span>
+
+                </label>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+
+
+        <div style="text-align:center;margin-top:2rem">
+
+            <button type="submit" class="btn" style="padding:1rem 3rem;font-size:1rem">
+
+                Submit Assessment →
+
+            </button>
+
+            <p style="font-size:.78rem;color:var(--muted2);margin-top:1rem">
+
+                Your responses are processed securely and never shared with management.
+
+            </p>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

@@ -471,11 +471,18 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
         baseline = round(min(100, max(0, baseline)), 1)
         risk_level = _get_risk_level(baseline)
 
+        # Flight Risk logic for baseline
+        flight_risk = baseline * 0.7 + (100 - sentiment_score) * 0.3
+        flight_risk = round(min(100, max(0, flight_risk)), 1)
+        replacement_cost = 40000
+
         return {
             "employee_id": employee_id,
             "composite_score": baseline,
             "adjusted_score": baseline,
             "risk_level": risk_level,
+            "flight_risk": flight_risk,
+            "replacement_cost": replacement_cost,
             "breakdown": {
                 "assessment": {"score": 0, "weight": WEIGHTS["assessment"]},
                 "sentiment": {"score": sentiment_score, "weight": WEIGHTS["sentiment"]},
@@ -537,10 +544,18 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
     # Determine risk level
     risk_level = _get_risk_level(adjusted_score)
 
+    # Calculate Flight Risk (Probability of quitting 0-100%)
+    # Base risk is the adjusted burnout score. We add penalties for bad sentiment
+    flight_risk = adjusted_score * 0.7 + (100 - sentiment_score) * 0.3
+    flight_risk = round(min(100, max(0, flight_risk)), 1)
+    
+    # Calculate Estimated Replacement Cost (Average tech replacement is 50-200% of salary, we'll use a static $40,000 for the demo)
+    replacement_cost = 40000 
+    
     # Assessment history trend
     assessment_trend = []
     for a in assessments:
-        s = compute_assessment_score(a["answers"])
+        s, _ = compute_assessment_score(a["answers"])
         assessment_trend.append({
             "date": a["timestamp"],
             "score": s,
@@ -551,6 +566,8 @@ def compute_burnout_score(employee_id, assessments, work_logs, messages):
         "composite_score": composite,
         "adjusted_score": adjusted_score,
         "risk_level": risk_level,
+        "flight_risk": flight_risk,
+        "replacement_cost": replacement_cost,
         "breakdown": {
             "assessment": {"score": assessment_score, "weight": WEIGHTS["assessment"]},
             "sentiment": {"score": sentiment_score, "weight": WEIGHTS["sentiment"]},

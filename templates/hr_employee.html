@@ -24,7 +24,7 @@
         </div>
 
         <!-- Risk Badge -->
-        <div class="card" style="text-align:center;padding:1.2rem">
+        <div class="card" style="text-align:center;padding:1.2rem;margin-bottom:1.2rem">
             <div class="kpi-label" style="margin-bottom:.5rem">Current Risk Level</div>
             <span
                 class="badge badge-lg badge-{% if burnout.risk_level == 'low' %}green{% elif burnout.risk_level == 'moderate' %}amber{% elif burnout.risk_level == 'high' %}red{% else %}red{% endif %}">
@@ -38,6 +38,35 @@
             </div>
             <div style="font-size:.72rem;color:var(--muted)">Composite Burnout Score</div>
         </div>
+
+        <!-- Flight Risk (Financial Impact) -->
+        <div class="card" style="margin-bottom:1.2rem; border-left:3px solid var(--amber)">
+            <div class="card-header" style="color:var(--amber)">💸 Flight Risk & Financial Impact</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.8rem">
+                <span style="font-size:.85rem; color:var(--text-main)">Likelihood to Quit</span>
+                <span class="badge badge-amber" style="font-size:.8rem; font-weight:700">{{ burnout.flight_risk
+                    }}%</span>
+            </div>
+            <!-- Flight Risk Bar -->
+            <div
+                style="width:100%; height:8px; background:var(--surface2); border-radius:4px; overflow:hidden; margin-bottom:1rem">
+                <div style="width:{{ burnout.flight_risk }}%; height:100%; background:var(--amber)"></div>
+            </div>
+
+            <div
+                style="padding: .8rem; background:rgba(245, 158, 11, 0.08); border-radius:8px; border:1px solid rgba(245, 158, 11, 0.2)">
+                <div
+                    style="font-size:.7rem; color:var(--muted); margin-bottom:.2rem; text-transform:uppercase; letter-spacing:.05em">
+                    Estimated Replacement Cost</div>
+                <div style="font-size:1.4rem; font-weight:800; color:var(--amber)">${{
+                    "{:,.0f}".format(burnout.replacement_cost) }}</div>
+                <div style="font-size:.7rem; color:var(--muted2); margin-top:.4rem; line-height:1.4">
+                    Based on industry averages to source, hire, and train a replacement for the <strong>{{ employee.role
+                        }}</strong> role. Early intervention saves capital.
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- RIGHT: Details -->

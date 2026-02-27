@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-left">
+        <div class="section-label">Employee Wellbeing</div>
+        <h2 style="margin-bottom:1rem">Burn<em style="color:var(--green)">Shield</em></h2>
+        <p style="color:var(--muted);font-size:.95rem;max-width:380px;margin-bottom:2rem">
+            A private, data-driven approach to identifying and supporting early signs of workplace stress &amp; burnout.
+        </p>
+        <div class="login-features">
+            <div class="login-feature"><span>🔒</span> End-to-end privacy by design</div>
+            <div class="login-feature"><span>🧠</span> Identifies patterns, not labels</div>
+            <div class="login-feature"><span>🤝</span> 100% voluntary participation</div>
+            <div class="login-feature"><span>📊</span> Never linked to performance reviews</div>
+            <div class="login-feature"><span>🛡️</span> HR insight without surveillance</div>
+        </div>
+    </div>
+    <div class="login-right">
+        <div class="login-form">
+            <div class="section-label" style="margin-bottom:1.5rem">Sign In</div>
+
+            {% if error %}
+            <div class="form-error">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="emp_id">Employee ID</label>
+                    <input type="text" id="emp_id" name="emp_id" placeholder="e.g. EMP001" autocomplete="off"
+                        spellcheck="false" autofocus style="text-transform:uppercase">
+                </div>
+                <button type="submit" class="btn btn-block" style="margin-top:.5rem">
+                    Sign In →
+                </button>
+            </form>
+
+            <p class="login-hint">
+                Employees: EMP001 – EMP015 &nbsp;|&nbsp; HR Managers: EMP016 – EMP020
+            </p>
+
+            <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border)">
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center">
+                    <span class="pill">Privacy-First</span>
+                    <span class="pill">Voluntary</span>
+                    <span class="pill">No Surveillance</span>
+                    <span class="pill">Support-Only</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Wellness Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --secondary: #475569;
+            --accent: #0ea5e9;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 8px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============ ANIMATIONS ============ */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ============ LOADING ============ */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            gap: 2rem;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* ============ LOGIN ============ */
+        .login-wrapper {
+            display: flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .login-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            max-width: 1100px;
+            width: 100%;
+            align-items: center;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .login-left {
+            animation: slideInLeft 0.6s ease 0.2s both;
+        }
+
+        .login-left h1 {
+            font-family: 'Merriweather', serif;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            line-height: 1.3;
+        }
+
+        .login-left p {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 3rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border);
+            animation: slideInRight 0.6s ease 0.2s both;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .form-group:nth-child(1) { animation-delay: 0.1s; }
+        .form-group:nth-child(2) { animation-delay: 0.2s; }
+        .form-group:nth-child(3) { animation-delay: 0.3s; }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.85rem;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .role-select {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .role-option {
+            flex: 1;
+            padding: 0.85rem;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .role-option:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.1);
+        }
+
+        .role-option.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.3);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .login-btn:hover:not(:disabled)::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            background: #1e3a8a;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.3);
+        }
+
+        .login-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: none;
+            border-left: 4px solid var(--danger);
+            animation: slideDown 0.3s ease;
+        }
+
+        /* ============ DASHBOARD LAYOUT ============ */
+        .dashboard-wrapper {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+            background: var(--bg);
+        }
+
+        /* ============ SIDEBAR ============ */
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            overflow-y: auto;
+            animation: slideInLeft 0.5s ease;
+        }
+
+        .sidebar-logo {
+            padding: 0 1.5rem;
+            margin-bottom: 2.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 0.9rem 1.5rem;
+            margin: 0 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+            transform-origin: top;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-secondary);
+            color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .nav-item.active {
+            background: rgba(30, 64, 175, 0.1);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .nav-item.active::before {
+            transform: scaleY(1);
+        }
+
+        .nav-icon {
+            font-size: 1.1rem;
+            animation: bounce 0.6s ease infinite;
+        }
+
+        .nav-item:nth-child(1) .nav-icon { animation-delay: 0s; }
+        .nav-item:nth-child(2) .nav-icon { animation-delay: 0.1s; }
+        .nav-item:nth-child(3) .nav-icon { animation-delay: 0.2s; }
+
+        .sidebar-user {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+            animation: slideInLeft 0.5s ease 0.3s both;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.1rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .user-details h4 {
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+            color: var(--text);
+        }
+
+        .user-details p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 0.7rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(220, 38, 38, 0.05);
+            transform: translateY(-2px);
+        }
+
+        /* ============ MAIN CONTENT ============ */
+        .main-content {
+            margin-left: 250px;
+            padding: 2.5rem;
+            min-height: 100vh;
+            animation: slideInRight 0.5s ease;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            animation: fadeIn 0.5s ease 0.1s both;
+        }
+
+        .header-title h1 {
+            font-family: 'Merriweather', serif;
+            font-size: 2rem;
+            color: var(--text);
+            margin-bottom: 0.3rem;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1e3a8a;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* ============ STATS GRID ============ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.1);
+            transform: translateY(-8px);
+        }
+
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.8rem;
+            display: inline-block;
+            animation: bounce 1s ease infinite;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ============ MAIN GRID ============ */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            animation: fadeIn 0.5s ease 0.2s both;
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .card-action {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .card-action:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* ============ ACTIVITY LIST ============ */
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            border-left: 3px solid var(--border);
+            cursor: pointer;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .activity-item:hover {
+            border-left-color: var(--primary);
+            background: white;
+            transform: translateX(4px);
+        }
+
+        .activity-icon {
+            font-size: 1.3rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 64, 175, 0.1);
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: bounce 0.6s ease infinite;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .activity-time {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* ============ ASSESSMENT ============ */
+        .assessment-container {
+            max-width: 900px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 3px;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 10px rgba(30, 64, 175, 0.3);
+        }
+
+        .question-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            animation: slideDown 0.4s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .question-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .question-card p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .option-btn {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            color: var(--text);
+            padding: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            background: white;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(30, 64, 175, 0.15);
+        }
+
+        .option-btn.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.3);
+            animation: bounce 0.4s ease;
+        }
+
+        .option-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ============ MODAL ============ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            animation: fadeIn 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: slideDown 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .close-btn {
+            background: var(--bg);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: var(--text-muted);
+        }
+
+        .close-btn:hover {
+            background: var(--danger);
+            color: white;
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        .modal-content {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        /* ============ CONCERN SECTION ============ */
+        .concern-submitted {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 1.5rem;
+            border-radius: 4px;
+            text-align: center;
+            margin: 2rem 0;
+            animation: slideDown 0.4s ease;
+        }
+
+        /* ============ HR PANEL ============ */
+        .employees-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .employee-row {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.5s ease;
+            cursor: pointer;
+        }
+
+        .employee-row:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .employee-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .employee-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.1rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .employee-meta {
+            text-align: left;
+        }
+
+        .employee-name {
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.2rem;
+        }
+
+        .employee-status {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 1rem;
+            text-transform: uppercase;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-good {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-warning {
+            background: rgba(217, 119, 6, 0.1);
+            color: var(--warning);
+        }
+
+        .status-critical {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+        }
+
+        .concern-badge {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .action-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: scale(1.1) translateY(-2px);
+        }
+
+        /* ============ CONCERNS LIST ============ */
+        .concerns-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .concern-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            border-left: 4px solid var(--warning);
+            animation: fadeIn 0.5s ease;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .concerned-item:hover {
+            border-color: var(--warning);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(-4px);
+        }
+
+        /* ============ RESOURCE SELECTION ============ */
+        .resource-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .resource-checkbox:hover {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .resource-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.8rem;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .resource-checkbox.selected {
+            background: rgba(30, 64, 175, 0.1);
+            border-color: var(--primary);
+        }
+
+        .resource-info {
+            text-align: left;
+        }
+
+        .resource-name {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.2rem;
+        }
+
+        .resource-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ============ CHATBOT ============ */
+        .chatbot-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .chat-box {
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+            animation: fadeIn 0.5s ease 0.2s both;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: var(--bg);
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 0.8rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        .chat-message.user {
+            justify-content: flex-end;
+        }
+
+        .chat-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .chat-avatar.bot {
+            background: rgba(30, 64, 175, 0.1);
+            color: var(--primary);
+        }
+
+        .chat-avatar.user {
+            background: var(--primary);
+            color: white;
+        }
+
+        .chat-bubble {
+            max-width: 70%;
+            padding: 1rem;
+            border-radius: 12px;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .chat-bubble.bot {
+            background: white;
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-bubble.user {
+            background: var(--primary);
+            color: white;
+        }
+
+        .chat-input-area {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .chat-send {
+            width: 45px;
+            height: 45px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .chat-send:hover {
+            background: #1e3a8a;
+            transform: scale(1.05) translateY(-2px);
+        }
+
+        .chat-suggestions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .suggestion-btn {
+            padding: 0.8rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-btn:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 1rem;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            animation: bounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .login-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- LOADING -->
+    <div class="loading-screen" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div class="screen active" id="screen-login">
+        <div class="login-wrapper">
+            <div class="login-container">
+                <div class="login-left">
+                    <h1>Corporate Wellness Platform</h1>
+                    <p>A professional approach to employee wellbeing management. Monitor, support, and foster a healthier workplace culture with our comprehensive wellness tracking system.</p>
+                    <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 4px; margin-top: 2rem; animation: fadeIn 0.5s ease 0.4s both;">
+                        <p style="font-size: 0.9rem; color: var(--text-muted);"><strong>Demo Accounts:</strong></p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.8rem;">👤 Employee: <strong>emp001</strong></p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">👔 Manager: <strong>manager001</strong></p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">🔑 HR Admin: <strong>hr001</strong></p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">🔐 Password: <strong>demo</strong></p>
+                    </div>
+                </div>
+                <div class="login-card">
+                    <div class="login-header">
+                        <h2>Sign In</h2>
+                        <p>Access your wellness dashboard</p>
+                    </div>
+
+                    <div class="error-message" id="errorMsg"></div>
+
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <div class="role-select" id="roleSelect">
+                            <div class="role-option" onclick="selectRole(this, 'emp')">Employee</div>
+                            <div class="role-option" onclick="selectRole(this, 'manager')">Manager</div>
+                            <div class="role-option" onclick="selectRole(this, 'hr')">HR Admin</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Employee ID</label>
+                        <input type="text" class="form-input" id="loginEmail" placeholder="emp001">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPass" placeholder="Enter password" onkeypress="if(event.key==='Enter') doLogin()">
+                    </div>
+
+                    <button class="login-btn" onclick="doLogin()">Sign In</button>
+
+                    <div class="login-footer" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1.5rem;">
+                        Use the demo credentials to explore the platform
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div class="screen" id="screen-dashboard">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-logo">Wellness</div>
+            <nav class="sidebar-nav">
+                <div class="nav-item active" onclick="switchTab('dashboard')">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('assessment')">
+                    <span class="nav-icon">✅</span>
+                    <span>Assessment</span>
+                </div>
+                <div class="nav-item" id="nav-report" style="display:none;" onclick="switchTab('report')">
+                    <span class="nav-icon">📋</span>
+                    <span>Submit Concern</span>
+                </div>
+                <div class="nav-item" id="nav-tracking" style="display:none;" onclick="switchTab('tracking')">
+                    <span class="nav-icon">⏱️</span>
+                    <span>Work Tracking</span>
+                </div>
+                <div class="nav-item" id="nav-concerns" style="display:none;" onclick="switchTab('concerns')">
+                    <span class="nav-icon">⚠️</span>
+                    <span>Concerns</span>
+                </div>
+                <div class="nav-item" id="nav-hr" style="display:none;" onclick="switchTab('hr')">
+                    <span class="nav-icon">👥</span>
+                    <span>Employee Data</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('chatbot')">
+                    <span class="nav-icon">🤖</span>
+                    <span>Wellness Bot</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('history')">
+                    <span class="nav-icon">📈</span>
+                    <span>History</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('resources')">
+                    <span class="nav-icon">📚</span>
+                    <span>Resources</span>
+                </div>
+            </nav>
+
+            <div class="sidebar-user">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">A</div>
+                    <div class="user-details">
+                        <h4 id="userName">User</h4>
+                        <p id="userRole">Employee</p>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- TAB: DASHBOARD -->
+            <div class="tab-content" id="tab-dashboard" style="display: block;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1 id="dashTitle">Wellness Dashboard</h1>
+                        <p id="dashSub">Monitor your wellbeing metrics</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="switchTab('assessment')">Start Assessment</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">💪</div>
+                        <div class="stat-label">Wellness Score</div>
+                        <div class="stat-value" id="statScore">--</div>
+                        <div class="stat-sub">Last update today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-label">Assessments</div>
+                        <div class="stat-value" id="statAssess">0</div>
+                        <div class="stat-sub">This month</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-label">Hours Logged</div>
+                        <div class="stat-value" id="statHours">0h</div>
+                        <div class="stat-sub">This week</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-label">Streak</div>
+                        <div class="stat-value" id="statStreak">0</div>
+                        <div class="stat-sub">Days active</div>
+                    </div>
+                </div>
+
+                <div class="main-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Recent Activity</div>
+                            <div class="card-action" onclick="switchTab('history')">View All</div>
+                        </div>
+                        <div class="activity-list" id="activityList">
+                            <div class="activity-item">
+                                <div class="activity-icon">✅</div>
+                                <div class="activity-content">
+                                    <div class="activity-title">Assessment Completed</div>
+                                    <div class="activity-time">Today at 9:30 AM</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Quick Stats</div>
+                        </div>
+                        <div style="text-align: center; padding: 2rem 0;">
+                            <div style="font-size: 3rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">75%</div>
+                            <div style="color: var(--text-muted);">Wellness Goal Progress</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: ASSESSMENT -->
+            <div class="tab-content" id="tab-assessment" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1>Wellness Assessment</h1>
+                        <p>Answer honestly. Your responses are confidential.</p>
+                    </div>
+                </div>
+
+                <div class="assessment-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="assessProg" style="width: 0%"></div>
+                    </div>
+                    <div id="questionsContainer"></div>
+                </div>
+            </div>
+
+            <!-- TAB: REPORT CONCERN (Employee Only) -->
+            <div class="tab-content" id="tab-report" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1>Anonymous Colleague Concern</h1>
+                        <p>Report concerns about a colleague's wellbeing (completely anonymous)</p>
+                    </div>
+                </div>
+
+                <div class="card" style="max-width: 600px;">
+                    <div id="concernForm">
+                        <div class="form-group">
+                            <label class="form-label">Which colleague are you concerned about?</label>
+                            <select class="form-input" id="concernColleague">
+                                <option value="">-- Select colleague --</option>
+                                <option value="emp002">Sarah Johnson</option>
+                                <option value="emp003">Mike Chen</option>
+                                <option value="emp004">Lisa Martinez</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">What is your concern?</label>
+                            <textarea class="form-input" id="concernText" style="resize: vertical; min-height: 120px;" placeholder="Be specific and respectful..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="confirmAnon" checked> I understand this submission is anonymous and will only be seen by HR/Manager
+                            </label>
+                        </div>
+
+                        <button class="btn btn-primary" style="width: 100%;" onclick="submitConcern()">Submit Concern Anonymously</button>
+                    </div>
+
+                    <div id="concernSuccess" style="display: none;" class="concern-submitted">
+                        ✅ Your concern has been submitted successfully. Thank you for looking out for your colleagues.
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: WORK TRACKING -->
+            <div class="tab-content" id="tab-tracking" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1>Work Hour Tracking</h1>
+                        <p>Monitor hours based on stress and login patterns</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-label">Total Hours</div>
+                        <div class="stat-value">38h</div>
+                        <div class="stat-sub">This week</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-label">Stress Level</div>
+                        <div class="stat-value">45%</div>
+                        <div class="stat-sub">Moderate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🕐</div>
+                        <div class="stat-label">Avg Login</div>
+                        <div class="stat-value">9:15</div>
+                        <div class="stat-sub">AM</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🕕</div>
+                        <div class="stat-label">Avg Logout</div>
+                        <div class="stat-value">6:30</div>
+                        <div class="stat-sub">PM</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title" style="margin-bottom: 1.5rem;">Weekly Breakdown</div>
+                    <div class="activity-list" id="trackingList"></div>
+                </div>
+            </div>
+
+            <!-- TAB: CONCERNS (Manager/HR Only) -->
+            <div class="tab-content" id="tab-concerns" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1>Employee Concerns</h1>
+                        <p>Anonymous concerns reported by employees (Restricted Access)</p>
+                    </div>
+                </div>
+
+                <div class="concerns-list" id="concernsList"></div>
+            </div>
+
+            <!-- TAB: HR PANEL -->
+            <div class="tab-content" id="tab-hr" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1 id="hrTitle">Employee Wellness Data</h1>
+                        <p>Manage and monitor employee wellbeing</p>
+                    </div>
+                </div>
+
+                <div class="employees-list" id="employeesList"></div>
+            </div>
+
+            <!-- TAB: WELLNESS BOT -->
+            <div class="tab-content" id="tab-chatbot" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1>Wellness AI Chatbot</h1>
+                        <p>Chat with our AI for instant stress relief advice and wellness tips</p>
+                    </div>
+                </div>
+
+                <div class="chatbot-container">
+                    <div class="chat-box">
+                        <div class="chat-messages" id="chatMessages"></div>
+                        <div class="chat-input-area">
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Type your concern..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                            <button class="chat-send" onclick="sendChatMessage()">➤</button>
+                        </div>
+                    </div>
+                    <div class="chat-suggestions" id="chatSuggestions"></div>
+                </div>
+            </div>
+
+            <!-- TAB: HISTORY -->
+            <div class="tab-content" id="tab-history" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1>Wellness History</h1>
+                        <p>Your past assessments and metrics</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="activity-list" id="historyList"></div>
+                </div>
+            </div>
+
+            <!-- TAB: RESOURCES -->
+            <div class="tab-content" id="tab-resources" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <h1>Wellness Resources</h1>
+                        <p>Support materials and guides</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card" style="cursor: pointer;" onclick="alert('Opening: Stress Management Guide')">
+                        <div class="stat-icon">🌿</div>
+                        <div class="stat-label">Stress</div>
+                        <div class="stat-value" style="font-size: 1.5rem;">Management</div>
+                        <div class="stat-sub">10 techniques</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="alert('Opening: Sleep Optimization')">
+                        <div class="stat-icon">😴</div>
+                        <div class="stat-label">Sleep</div>
+                        <div class="stat-value" style="font-size: 1.5rem;">Guide</div>
+                        <div class="stat-sub">7-day program</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="alert('Opening: Fitness Routines')">
+                        <div class="stat-icon">🏃</div>
+                        <div class="stat-label">Fitness</div>
+                        <div class="stat-value" style="font-size: 1.5rem;">Routines</div>
+                        <div class="stat-sub">15-min workouts</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="alert('Opening: Mindfulness')">
+                        <div class="stat-icon">🧘</div>
+                        <div class="stat-label">Mindfulness</div>
+                        <div class="stat-value" style="font-size: 1.5rem;">Basics</div>
+                        <div class="stat-sub">5-min exercises</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FOR HR FILE VIEW -->
+    <div class="modal-overlay" id="fileModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="fileTitle">Employee Assessment</div>
+                <button class="close-btn" onclick="closeFileModal()">✕</button>
+            </div>
+            <div class="modal-content" id="fileContent"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeFileModal()">Close</button>
+                <button class="btn btn-primary" onclick="openResourceModal()">Send Resources</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FOR RESOURCE SELECTION -->
+    <div class="modal-overlay" id="resourceModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <div class="modal-title">Select Wellness Resources</div>
+                <button class="close-btn" onclick="closeResourceModal()">✕</button>
+            </div>
+            <div class="modal-content">
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Choose resources to send to <strong id="resourceEmpName"></strong></p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;" id="resourceGrid"></div>
+                <div style="background: var(--bg); padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted);"><strong>Selected Resources:</strong></p>
+                    <div id="selectedResources" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeResourceModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="sendSelectedResources()">Send Resources</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ STATE ============
+        let state = {
+            authenticated: false,
+            user: null,
+            role: null,
+            currentQuestion: 0,
+            answers: [],
+            wellnessScore: 0
+        };
+
+        const QUESTIONS = [
+            {
+                title: "How emotionally exhausted do you feel?",
+                context: "Over the past two weeks",
+                options: [
+                    { text: "Rarely or never", score: 0 },
+                    { text: "Sometimes", score: 1 },
+                    { text: "Often", score: 2 },
+                    { text: "Almost always", score: 3 }
+                ]
+            },
+            {
+                title: "How would you rate your work motivation?",
+                context: "Current level of engagement",
+                options: [
+                    { text: "Very high", score: 0 },
+                    { text: "Moderate", score: 1 },
+                    { text: "Low", score: 2 },
+                    { text: "Very low", score: 3 }
+                ]
+            },
+            {
+                title: "How satisfied are you with your workload?",
+                context: "Balance and manageability",
+                options: [
+                    { text: "Very satisfied", score: 0 },
+                    { text: "Somewhat satisfied", score: 1 },
+                    { text: "Dissatisfied", score: 2 },
+                    { text: "Very dissatisfied", score: 3 }
+                ]
+            },
+            {
+                title: "How overwhelmed do you feel?",
+                context: "By your responsibilities",
+                options: [
+                    { text: "Not at all", score: 0 },
+                    { text: "Slightly", score: 1 },
+                    { text: "Considerably", score: 2 },
+                    { text: "Completely", score: 3 }
+                ]
+            },
+            {
+                title: "Do you feel supported by your team?",
+                context: "Emotional and practical support",
+                options: [
+                    { text: "Strongly agree", score: 0 },
+                    { text: "Somewhat", score: 1 },
+                    { text: "Not really", score: 2 },
+                    { text: "Not at all", score: 3 }
+                ]
+            }
+        ];
+
+        const EMPLOYEES = [
+            { id: 'emp001', name: 'Sarah Johnson', role: 'Engineer', score: 75, status: 'good', concerns: 0 },
+            { id: 'emp002', name: 'Mike Chen', role: 'Designer', score: 58, status: 'warning', concerns: 1 },
+            { id: 'emp003', name: 'Lisa Martinez', role: 'Manager', score: 42, status: 'critical', concerns: 2 },
+            { id: 'emp004', name: 'James Wilson', role: 'Developer', score: 82, status: 'good', concerns: 0 }
+        ];
+
+        const CONCERNS_DATA = [
+            { employee: 'emp002', concern: 'Seems withdrawn in meetings, not engaging with team activities', date: '2024-02-24' },
+            { employee: 'emp003', concern: 'Working long hours regularly, appears stressed in interactions', date: '2024-02-22' },
+            { employee: 'emp003', concern: 'Missing lunch breaks frequently, seems overwhelmed', date: '2024-02-20' }
+        ];
+
+        const RESOURCES = [
+            { id: 'stress', name: '🌿 Stress Management', desc: '10 proven techniques', category: 'Mental Health' },
+            { id: 'sleep', name: '😴 Sleep Optimization', desc: '7-day sleep program', category: 'Wellness' },
+            { id: 'fitness', name: '🏃 Fitness Routines', desc: '15-minute workouts', category: 'Physical Health' },
+            { id: 'mindfulness', name: '🧘 Mindfulness Guide', desc: '5-minute daily exercises', category: 'Mental Health' },
+            { id: 'nutrition', name: '🥗 Nutrition Guide', desc: 'Healthy eating tips', category: 'Wellness' },
+            { id: 'worklife', name: '⚖️ Work-Life Balance', desc: 'Boundary setting guide', category: 'Lifestyle' }
+        ];
+
+        let selectedRole = null;
+        let selectedResourcesForEmployee = [];
+        let currentEmployeeForResources = null;
+
+        // ============ CHATBOT DATA ============
+        const BOT_RESPONSES = {
+            stress: [
+                "I hear you're stressed. That's completely normal. Let's work through this together. Would you like to try a quick breathing exercise? Try: Breathe in for 4 counts, hold for 4, breathe out for 4. Do this 5 times.",
+                "Stress often comes from feeling overwhelmed. Let's break down what's bothering you. Can you tell me the top 3 things causing stress?",
+                "Remember, you're not alone in this. Many people experience stress at work. What specific situation is triggering your stress right now?"
+            ],
+            anxiety: [
+                "Anxiety can feel overwhelming, but it's manageable. Try this grounding technique: Name 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, 1 you can taste.",
+                "When anxiety strikes, physical activity helps. Even a 10-minute walk can work wonders. Would you like some exercise suggestions?",
+                "Have you tried mindfulness? A simple 5-minute meditation can calm your nervous system. Would you like me to guide you through one?"
+            ],
+            sleep: [
+                "Sleep issues are common. Here are some tips: Maintain a consistent sleep schedule, avoid screens 1 hour before bed, keep your room cool and dark.",
+                "Quality sleep is crucial for wellness. Try the 4-7-8 breathing technique before bed: Breathe in for 4, hold for 7, exhale for 8.",
+                "Consider these sleep aids: herbal tea, warm bath, reading, or journaling. Which sounds appealing to you?"
+            ],
+            workload: [
+                "Heavy workload can be exhausting. It's important to prioritize. Can you identify your top 3 priorities for today?",
+                "Remember, you can't do everything at once. Focus on one task at a time. Break big projects into smaller steps.",
+                "Have you considered delegating some tasks? It's okay to ask for help. Your wellbeing comes first."
+            ],
+            motivation: [
+                "Low motivation often indicates burnout. Let's think about what energizes you. What activities make you feel good?",
+                "Sometimes motivation comes from taking small wins. Start your day with one achievable goal. Build momentum from there.",
+                "Connect your work to your values. Understanding the 'why' behind what you do can reignite motivation."
+            ],
+            tired: [
+                "Fatigue can be a sign your body needs rest. Have you been taking breaks? Regular breaks boost productivity and energy.",
+                "Try this: Take a 15-minute power nap (not longer!), or get some fresh air and sunlight to boost your energy.",
+                "Dehydration often causes fatigue. Are you drinking enough water? Aim for 8 glasses daily."
+            ],
+            default: [
+                "I'm here to help! Tell me more about what's on your mind. Are you stressed, anxious, tired, or overwhelmed with work?",
+                "That sounds important. How is this affecting your wellbeing right now?",
+                "I appreciate you sharing. Remember, self-care isn't selfish—it's necessary. What support would help you most?"
+            ]
+        };
+
+        const CHAT_SUGGESTIONS = [
+            "I'm feeling stressed 😟",
+            "Help with anxiety 😰",
+            "Sleep troubles 😴",
+            "Work is overwhelming 📚",
+            "Lost my motivation 😞",
+            "Feeling tired 🥱"
+        ];
+
+        // ============ LOGIN ============
+        function selectRole(el, role) {
+            document.querySelectorAll('.role-option').forEach(r => r.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedRole = role;
+        }
+
+        function doLogin() {
+            const empId = document.getElementById('loginEmail').value.toLowerCase().trim();
+            const pass = document.getElementById('loginPass').value;
+            const errorMsg = document.getElementById('errorMsg');
+
+            errorMsg.style.display = 'none';
+
+            if (!empId || !pass) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            if (pass !== 'demo') {
+                showError('Incorrect password');
+                return;
+            }
+
+            if (!selectedRole) {
+                showError('Please select a role');
+                return;
+            }
+
+            const validCredentials = {
+                'emp': 'emp001',
+                'manager': 'manager001',
+                'hr': 'hr001'
+            };
+
+            if (empId !== validCredentials[selectedRole]) {
+                showError(`Invalid ID. Use: ${validCredentials[selectedRole]}`);
+                return;
+            }
+
+            state.authenticated = true;
+            state.user = {
+                id: empId,
+                name: selectedRole === 'emp' ? 'Sarah Johnson' : selectedRole === 'manager' ? 'Robert Manager' : 'Alex HR',
+                role: selectedRole
+            };
+            state.role = selectedRole;
+
+            updateUI();
+            goToScreen('screen-dashboard');
+        }
+
+        function showError(msg) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
+        }
+
+        function updateUI() {
+            document.getElementById('userAvatar').textContent = state.user.name.charAt(0);
+            document.getElementById('userName').textContent = state.user.name;
+            document.getElementById('userRole').textContent = state.role === 'emp' ? 'Employee' : state.role === 'manager' ? 'Manager' : 'HR Admin';
+
+            if (state.role === 'emp') {
+                document.getElementById('nav-report').style.display = 'flex';
+                document.getElementById('nav-tracking').style.display = 'flex';
+                document.getElementById('nav-concerns').style.display = 'none';
+                document.getElementById('nav-hr').style.display = 'none';
+                document.getElementById('dashTitle').textContent = 'Employee Wellness Hub';
+                document.getElementById('dashSub').textContent = 'Track your personal wellbeing';
+            } else if (state.role === 'manager') {
+                document.getElementById('nav-report').style.display = 'none';
+                document.getElementById('nav-tracking').style.display = 'flex';
+                document.getElementById('nav-concerns').style.display = 'flex';
+                document.getElementById('nav-hr').style.display = 'flex';
+                document.getElementById('dashTitle').textContent = 'Team Wellness Dashboard';
+                document.getElementById('dashSub').textContent = 'Manage team wellbeing and concerns';
+            } else {
+                document.getElementById('nav-report').style.display = 'none';
+                document.getElementById('nav-tracking').style.display = 'none';
+                document.getElementById('nav-concerns').style.display = 'flex';
+                document.getElementById('nav-hr').style.display = 'flex';
+                document.getElementById('dashTitle').textContent = 'Organization Wellness Hub';
+                document.getElementById('dashSub').textContent = 'System-wide employee wellbeing management';
+            }
+
+            populateTracking();
+            populateHistory();
+
+            if (state.role === 'manager' || state.role === 'hr') {
+                populateEmployeesList();
+                populateConcerns();
+            }
+        }
+
+        function logout() {
+            state.authenticated = false;
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPass').value = '';
+            selectedRole = null;
+            goToScreen('screen-login');
+        }
+
+        // ============ NAVIGATION ============
+        function goToScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+
+            event.target.closest('.nav-item')?.classList.add('active');
+            document.getElementById('tab-' + tabName).style.display = 'block';
+
+            if (tabName === 'assessment') {
+                renderAssessment();
+            } else if (tabName === 'chatbot') {
+                initChatbot();
+            }
+
+            window.scrollTo(0, 0);
+        }
+
+        // ============ ASSESSMENT ============
+        function renderAssessment() {
+            const container = document.getElementById('questionsContainer');
+            state.currentQuestion = 0;
+            state.answers = [];
+
+            container.innerHTML = QUESTIONS.map((q, i) => `
+                <div class="question-card" style="display: ${i === 0 ? 'block' : 'none'}" id="question-${i}">
+                    <h2>${q.title}</h2>
+                    <p>${q.context}</p>
+                    <div class="options-grid">
+                        ${q.options.map((opt, idx) => `
+                            <button class="option-btn" onclick="answerQuestion(${i}, ${idx})">${opt.text}</button>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            updateProgress();
+        }
+
+        function answerQuestion(questionIdx, optionIdx) {
+            state.answers[questionIdx] = optionIdx;
+            updateProgress();
+
+            const btn = document.querySelector(`#question-${questionIdx} .option-btn:nth-child(${optionIdx + 1})`);
+            btn.classList.add('selected');
+            document.querySelectorAll(`#question-${questionIdx} .option-btn`).forEach(b => b.disabled = true);
+
+            setTimeout(() => {
+                if (state.currentQuestion < QUESTIONS.length - 1) {
+                    state.currentQuestion++;
+                    document.querySelectorAll('.question-card').forEach(c => c.style.display = 'none');
+                    document.getElementById(`question-${state.currentQuestion}`).style.display = 'block';
+                } else {
+                    showAssessmentResults();
+                }
+            }, 600);
+        }
+
+        function updateProgress() {
+            const progress = (state.answers.length / QUESTIONS.length) * 100;
+            document.getElementById('assessProg').style.width = progress + '%';
+        }
+
+        function showAssessmentResults() {
+            const avg = state.answers.reduce((a, b) => a + b, 0) / state.answers.length;
+            state.wellnessScore = Math.round(100 - (avg / 3) * 100);
+
+            document.getElementById('statScore').textContent = state.wellnessScore + '%';
+
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = `
+                <div class="question-card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem; animation: bounce 0.6s ease;">✅</div>
+                    <h2>Assessment Complete</h2>
+                    <p style="color: var(--text-muted); margin: 1.5rem 0; font-size: 1.1rem;">Your wellness score: <strong style="color: var(--primary);">${state.wellnessScore}%</strong></p>
+                    <button class="btn btn-primary" style="margin-top: 2rem; width: 100%;" onclick="switchTab('dashboard')">Return to Dashboard</button>
+                </div>
+            `;
+        }
+
+        // ============ CONCERNS ============
+        function submitConcern() {
+            const colleague = document.getElementById('concernColleague').value;
+            const concern = document.getElementById('concernText').value;
+
+            if (!colleague || !concern.trim()) {
+                alert('Please select a colleague and describe your concern');
+                return;
+            }
+
+            document.getElementById('concernForm').style.display = 'none';
+            document.getElementById('concernSuccess').style.display = 'block';
+        }
+
+        function populateConcerns() {
+            const list = document.getElementById('concernsList');
+            list.innerHTML = CONCERNS_DATA.map((item, idx) => {
+                const emp = EMPLOYEES.find(e => e.id === item.employee);
+                return `
+                    <div class="concern-item" style="animation-delay: ${idx * 0.1}s;">
+                        <div class="concern-header">
+                            <div>
+                                <div class="concern-title">Concern about ${emp.name}</div>
+                                <div class="concern-date">${item.date}</div>
+                            </div>
+                            <span class="restricted-badge">Anonymous</span>
+                        </div>
+                        <div class="concern-text">${item.concern}</div>
+                        <div class="concern-meta">
+                            <span>Employee: ${emp.name} (${emp.id})</span>
+                            <button class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="reviewEmployee('${emp.id}', '${emp.name}')">View File</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============ HR PANEL ============
+        function populateEmployeesList() {
+            const list = document.getElementById('employeesList');
+            list.innerHTML = EMPLOYEES.map((emp, idx) => `
+                <div class="employee-row" style="animation-delay: ${idx * 0.1}s;">
+                    <div class="employee-info">
+                        <div class="employee-avatar">${emp.name.charAt(0)}</div>
+                        <div class="employee-meta">
+                            <div class="employee-name">${emp.name}</div>
+                            <div class="employee-status">${emp.id} • ${emp.role} • ${emp.concerns} ${emp.concerns === 1 ? 'concern' : 'concerns'}</div>
+                        </div>
+                        <span class="status-badge status-${emp.status}">
+                            ${emp.status === 'good' ? 'Healthy' : emp.status === 'warning' ? 'Attention Needed' : 'Critical'}
+                        </span>
+                    </div>
+                    <div class="row-actions">
+                        <button class="action-btn" title="View Assessment" onclick="reviewEmployee('${emp.id}', '${emp.name}', ${emp.score})">📋</button>
+                        <button class="action-btn" title="Send Resources" onclick="sendResourcesEmail('${emp.name}')">✉️</button>
+                        <button class="action-btn" title="View Details" onclick="viewEmployeeDetails('${emp.id}')">👁️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function reviewEmployee(empId, empName, score) {
+            document.getElementById('fileTitle').textContent = `${empName} - Assessment File`;
+            currentEmployeeForResources = { id: empId, name: empName, score: score };
+            document.getElementById('fileContent').innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <h3 style="margin-bottom: 0.8rem; color: var(--text);">Assessment Details</h3>
+                    <div style="background: var(--bg); padding: 1.2rem; border-radius: 4px; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem;">
+                            <span>Wellness Score:</span>
+                            <strong style="color: var(--primary); font-size: 1.2rem;">${score}%</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Status:</span>
+                            <strong style="color: ${score >= 70 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : 'var(--danger)'};">
+                                ${score >= 70 ? 'Healthy' : score >= 50 ? 'Needs Attention' : 'Critical'}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 1.2rem 0 0.8rem 0; color: var(--text);">Recommended Actions</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 0.5rem 0; color: var(--text-muted);">• Schedule 1-on-1 check-in</li>
+                        <li style="padding: 0.5rem 0; color: var(--text-muted);">• Share personalized resources</li>
+                        <li style="padding: 0.5rem 0; color: var(--text-muted);">• Monitor workload regularly</li>
+                    </ul>
+                </div>
+            `;
+            document.getElementById('fileModal').classList.add('active');
+        }
+
+        function openResourceModal() {
+            selectedResourcesForEmployee = [];
+            document.getElementById('resourceEmpName').textContent = currentEmployeeForResources.name;
+            
+            const grid = document.getElementById('resourceGrid');
+            grid.innerHTML = RESOURCES.map((resource, idx) => `
+                <label class="resource-checkbox" onclick="toggleResource('${resource.id}')" style="animation-delay: ${idx * 0.1}s;">
+                    <input type="checkbox" id="res-${resource.id}" value="${resource.id}">
+                    <div class="resource-info">
+                        <div class="resource-name">${resource.name}</div>
+                        <div class="resource-desc">${resource.desc}</div>
+                    </div>
+                </label>
+            `).join('');
+            
+            document.getElementById('fileModal').classList.remove('active');
+            document.getElementById('resourceModal').classList.add('active');
+        }
+
+        function toggleResource(resourceId) {
+            const checkbox = document.getElementById('res-' + resourceId);
+            checkbox.checked = !checkbox.checked;
+            
+            selectedResourcesForEmployee = Array.from(document.querySelectorAll('#resourceGrid input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+            
+            // Update selected display
+            document.querySelectorAll('.resource-checkbox').forEach(label => {
+                const checkbox = label.querySelector('input');
+                if (checkbox.checked) {
+                    label.classList.add('selected');
+                } else {
+                    label.classList.remove('selected');
+                }
+            });
+
+            // Update summary
+            const summary = document.getElementById('selectedResources');
+            if (selectedResourcesForEmployee.length === 0) {
+                summary.innerHTML = '<span style="color: var(--text-muted);">No resources selected</span>';
+            } else {
+                const selected = RESOURCES.filter(r => selectedResourcesForEmployee.includes(r.id));
+                summary.innerHTML = selected.map(r => `<div style="padding: 0.3rem 0;">✓ ${r.name}</div>`).join('');
+            }
+        }
+
+        function closeResourceModal() {
+            document.getElementById('resourceModal').classList.remove('active');
+        }
+
+        function sendSelectedResources() {
+            if (selectedResourcesForEmployee.length === 0) {
+                alert('Please select at least one resource');
+                return;
+            }
+
+            const resourceNames = RESOURCES.filter(r => selectedResourcesForEmployee.includes(r.id))
+                .map(r => r.name)
+                .join(', ');
+
+            alert(`✅ Selected resources sent to ${currentEmployeeForResources.name}:\n\n${resourceNames}`);
+            closeResourceModal();
+            closeFileModal();
+        }
+
+        function closeFileModal() {
+            document.getElementById('fileModal').classList.remove('active');
+        }
+
+        // ============ CHATBOT ============
+        function initChatbot() {
+            const messagesContainer = document.getElementById('chatMessages');
+            messagesContainer.innerHTML = `
+                <div class="chat-message">
+                    <div class="chat-avatar bot">🤖</div>
+                    <div class="chat-bubble bot">Hi there! 👋 I'm your Wellness AI. I'm here to help you manage stress, anxiety, and support your overall wellbeing. What's on your mind today?</div>
+                </div>
+            `;
+
+            const suggestionsContainer = document.getElementById('chatSuggestions');
+            suggestionsContainer.innerHTML = CHAT_SUGGESTIONS.map(suggestion => `
+                <button class="suggestion-btn" onclick="sendSuggestion('${suggestion}')">${suggestion}</button>
+            `).join('');
+
+            // Scroll to bottom
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            addChatMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Get AI response after a short delay
+            setTimeout(() => {
+                removeTypingIndicator();
+                const response = getAIResponse(message);
+                addChatMessage(response, 'bot');
+            }, 1000 + Math.random() * 1000);
+        }
+
+        function sendSuggestion(suggestion) {
+            const input = document.getElementById('chatInput');
+            input.value = suggestion;
+            sendChatMessage();
+        }
+
+        function addChatMessage(text, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}`;
+            messageDiv.innerHTML = `
+                <div class="chat-avatar ${sender}">${sender === 'user' ? '👤' : '🤖'}</div>
+                <div class="chat-bubble ${sender}">${text}</div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+
+            // Scroll to bottom
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 10);
+        }
+
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'chat-message';
+            typingDiv.innerHTML = `
+                <div class="chat-avatar bot">🤖</div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        function getAIResponse(userMessage) {
+            const lowerMessage = userMessage.toLowerCase();
+
+            // Detect keywords
+            if (lowerMessage.includes('stress') || lowerMessage.includes('stressed')) {
+                return BOT_RESPONSES.stress[Math.floor(Math.random() * BOT_RESPONSES.stress.length)];
+            } else if (lowerMessage.includes('anxious') || lowerMessage.includes('anxiety') || lowerMessage.includes('panic')) {
+                return BOT_RESPONSES.anxiety[Math.floor(Math.random() * BOT_RESPONSES.anxiety.length)];
+            } else if (lowerMessage.includes('sleep') || lowerMessage.includes('tired') || lowerMessage.includes('insomnia')) {
+                return BOT_RESPONSES.sleep[Math.floor(Math.random() * BOT_RESPONSES.sleep.length)];
+            } else if (lowerMessage.includes('work') || lowerMessage.includes('workload') || lowerMessage.includes('overwhelm')) {
+                return BOT_RESPONSES.workload[Math.floor(Math.random() * BOT_RESPONSES.workload.length)];
+            } else if (lowerMessage.includes('motiv') || lowerMessage.includes('bored') || lowerMessage.includes('unmotiv')) {
+                return BOT_RESPONSES.motivation[Math.floor(Math.random() * BOT_RESPONSES.motivation.length)];
+            } else if (lowerMessage.includes('tired') || lowerMessage.includes('fatigue') || lowerMessage.includes('exhausted')) {
+                return BOT_RESPONSES.tired[Math.floor(Math.random() * BOT_RESPONSES.tired.length)];
+            } else {
+                return BOT_RESPONSES.default[Math.floor(Math.random() * BOT_RESPONSES.default.length)];
+            }
+        }
+
+        function populateTracking() {
+            const list = document.getElementById('trackingList');
+            list.innerHTML = `
+                <div class="activity-item">
+                    <div class="activity-icon">📊</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Monday - 8h | Stress: 35%</div>
+                        <div class="activity-time">9:15 AM - 5:45 PM</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">📊</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Tuesday - 8.5h | Stress: 58%</div>
+                        <div class="activity-time">9:00 AM - 6:30 PM</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">📊</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Wednesday - 7.5h | Stress: 42%</div>
+                        <div class="activity-time">9:30 AM - 5:00 PM</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">📊</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Thursday - 9h | Stress: 65%</div>
+                        <div class="activity-time">8:45 AM - 6:45 PM</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function populateHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = `
+                <div class="activity-item">
+                    <div class="activity-icon">✅</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Assessment: 82% Wellness Score</div>
+                        <div class="activity-time">Today, 10:30 AM</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">✅</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Assessment: 75% Wellness Score</div>
+                        <div class="activity-time">3 days ago</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">✅</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Assessment: 68% Wellness Score</div>
+                        <div class="activity-time">1 week ago</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============ INIT ============
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 800);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BurnShield{% endblock %} — Employee Wellbeing</title>
+    <meta name="description"
+        content="Employee burnout prediction and monitoring system — privacy-first wellbeing support">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    {% if session.emp_id %}
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon">🛡️</span>
+            <span>BurnShield</span>
+        </div>
+        <div class="nav-links">
+            {% if session.is_hr %}
+            <a href="{{ url_for('hr_dashboard') }}" class="nav-link {{ 'active' if active_page == 'hr' }}">📊 HR
+                Dashboard</a>
+            <a href="{{ url_for('assessment') }}" class="nav-link {{ 'active' if active_page == 'assessment' }}">📝 My
+                Assessment</a>
+            {% else %}
+            <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if active_page == 'dashboard' }}">🏠
+                Dashboard</a>
+            <a href="{{ url_for('assessment') }}" class="nav-link {{ 'active' if active_page == 'assessment' }}">📝
+                Assessment</a>
+            <a href="{{ url_for('peer_report') }}" class="nav-link {{ 'active' if active_page == 'peer_report' }}">📩
+                Peer Report</a>
+            {% endif %}
+        </div>
+        <div class="nav-user">
+            <span class="nav-user-name">{{ current_employee.name if current_employee else '' }}</span>
+            <a href="{{ url_for('logout') }}" class="nav-logout">Sign Out</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="container" style="padding-bottom:0">
+        {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</body>
+
+</html>

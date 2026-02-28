@@ -7,40 +7,43 @@
     <h1>Assessment <em>Results</em></h1>
 </div>
 
-<!-- Result Hero -->
-<div class="result-card" style="margin-bottom:2rem">
-    {% set score = burnout.adjusted_score %}
-    {% set circumference = 326.7 %}
-    {% set offset = circumference - (score / 100) * circumference %}
-    {% if score < 30 %} {% set ring_color="var(--green)" %} {% set
-        msg="You're doing well! Your scores indicate a healthy work-life balance." %} {% elif score < 50 %} {% set
-        ring_color="var(--amber)" %} {% set
-        msg="Some stress signals detected. Your responses suggest moderate stress in some areas." %} {% elif score < 70
-        %} {% set ring_color="var(--red)" %} {% set
-        msg="Warning — elevated burnout risk. Consider reaching out to your manager or HR for support." %} {% else %} {%
-        set ring_color="var(--red)" %} {% set
-        msg="Critical burnout indicators detected. We strongly recommend immediate support and action." %} {% endif %}
-        <div class="wellness-ring" style="margin-bottom:1.5rem">
-        <svg viewBox="0 0 120 120">
-            <circle class="bg" cx="60" cy="60" r="52"></circle>
-            <circle class="fill" cx="60" cy="60" r="52" stroke="{{ ring_color }}" stroke-dasharray="{{ circumference }}"
-                stroke-dashoffset="{{ offset }}"></circle>
-        </svg>
-        <div class="label">
-            <span class="val" style="color:{{ ring_color }}">{{ score }}</span>
-            <span class="sub">Burnout %</span>
-        </div>
-</div>
+<!-- Wrap everything in a div for PDF capture -->
+<div id="pdf-content">
 
-<h2>Your Burnout Score: <em>{{ score }}%</em></h2>
-<p style="margin:.8rem auto 0;max-width:500px">{{ msg }}</p>
+    <!-- Result Hero -->
+    <div class="result-card" style="margin-bottom:2rem">
+        {% set score = burnout.adjusted_score %}
+        {% set circumference = 326.7 %}
+        {% set offset = circumference - (score / 100) * circumference %}
+        {% if score < 30 %} {% set ring_color="var(--green)" %} {% set
+            msg="You're doing well! Your scores indicate a healthy work-life balance." %} {% elif score < 50 %} {% set
+            ring_color="var(--amber)" %} {% set
+            msg="Some stress signals detected. Your responses suggest moderate stress in some areas." %} {% elif score <
+            70 %} {% set ring_color="var(--red)" %} {% set
+            msg="Warning — elevated burnout risk. Consider reaching out to your manager or HR for support." %} {% else
+            %} {% set ring_color="var(--red)" %} {% set
+            msg="Critical burnout indicators detected. We strongly recommend immediate support and action." %} {% endif
+            %} <div class="wellness-ring" style="margin-bottom:1.5rem">
+            <svg viewBox="0 0 120 120">
+                <circle class="bg" cx="60" cy="60" r="52"></circle>
+                <circle class="fill" cx="60" cy="60" r="52" stroke="{{ ring_color }}"
+                    stroke-dasharray="{{ circumference }}" stroke-dashoffset="{{ offset }}"></circle>
+            </svg>
+            <div class="label">
+                <span class="val" style="color:{{ ring_color }}">{{ score }}</span>
+                <span class="sub">Burnout %</span>
+            </div>
+    </div>
 
-<div style="margin-top:1rem">
-    <span
-        class="badge badge-lg badge-{% if burnout.risk_level == 'low' %}green{% elif burnout.risk_level == 'moderate' %}amber{% else %}red{% endif %}">
-        {{ burnout.risk_level|upper }} RISK
-    </span>
-</div>
+    <h2>Your Burnout Score: <em>{{ score }}%</em></h2>
+    <p style="margin:.8rem auto 0;max-width:500px">{{ msg }}</p>
+
+    <div style="margin-top:1rem">
+        <span
+            class="badge badge-lg badge-{% if burnout.risk_level == 'low' %}green{% elif burnout.risk_level == 'moderate' %}amber{% else %}red{% endif %}">
+            {{ burnout.risk_level|upper }} RISK
+        </span>
+    </div>
 </div>
 
 <!-- Breakdown -->
@@ -78,8 +81,21 @@
 </div>
 {% endif %}
 
+<!-- PDF Footer (only visible in PDF) -->
+<div id="pdf-footer"
+    style="display:none;margin-top:1.5rem;padding:1rem;border-top:2px solid #333;font-size:.75rem;color:#666">
+    <strong>BurnShield™ Wellness Report</strong><br>
+    Employee: {{ session.get('emp_id', '') }} · Generated: {{ burnout.last_assessment_date or 'N/A' }}<br>
+    <em>This report is confidential. For internal use only.</em>
+</div>
+
+</div><!-- end #pdf-content -->
+
 <!-- Actions -->
 <div class="result-actions" style="margin-bottom:2rem">
+    <button onclick="downloadPDF()" class="btn" style="display:inline-flex;align-items:center;gap:.4rem">
+        📄 Download PDF
+    </button>
     <a href="{{ url_for('assessment') }}" class="btn btn-outline">Retake Assessment</a>
     {% if session.get('is_hr') %}
     <a href="{{ url_for('hr_dashboard') }}" class="btn btn-secondary">Back to HR Dashboard</a>
@@ -87,4 +103,39 @@
     <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
     {% endif %}
 </div>
+
+<!-- html2pdf.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+    function downloadPDF() {
+        const element = document.getElementById('pdf-content');
+        const footer = document.getElementById('pdf-footer');
+        const btn = event.target.closest('button');
+
+        // Show footer for PDF
+        footer.style.display = 'block';
+
+        // Visual feedback
+        btn.textContent = '⏳ Generating...';
+        btn.disabled = true;
+
+        const opt = {
+            margin: [10, 10, 10, 10],
+            filename: 'BurnShield_Assessment_{{ session.get("emp_id", "report") }}.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f1729' },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(function () {
+            footer.style.display = 'none';
+            btn.innerHTML = '📄 Download PDF';
+            btn.disabled = false;
+        }).catch(function () {
+            footer.style.display = 'none';
+            btn.innerHTML = '📄 Download PDF';
+            btn.disabled = false;
+        });
+    }
+</script>
 {% endblock %}

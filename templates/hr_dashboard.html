@@ -196,30 +196,68 @@
     </div>
 </div>
 
-<!-- Peer Reports -->
+<!-- Peer Reports with Actions -->
 {% if peer_reports %}
 <div class="card mt-3">
-    <div class="card-header">📩 Recent Peer Concern Reports</div>
-    {% for report in peer_reports[:5] %}
-    <div class="alert-item">
-        <span class="alert-icon">
+    <div class="card-header">📩 Peer Concern Reports
+        <span class="badge badge-blue" style="margin-left:.5rem">{{ peer_reports|length }} report{{ 's' if
+            peer_reports|length > 1 }}</span>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted2);margin-bottom:1rem">
+        These are anonymous or identified concerns submitted by employees about their colleagues. Review and take
+        appropriate action.
+    </p>
+    {% for report in peer_reports[:10] %}
+    <div
+        style="display:flex;align-items:flex-start;gap:.7rem;padding:.9rem 1rem;margin-bottom:.6rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border);
+        {% if report.status == 'pending' %}border-left:3px solid var(--amber){% else %}border-left:3px solid var(--green){% endif %}">
+        <div style="flex-shrink:0;font-size:1.3rem;margin-top:.1rem">
             {% if report.concern_type == 'burnout' %}🔥
             {% elif report.concern_type == 'workload' %}📋
             {% elif report.concern_type == 'behavior_change' %}🔄
             {% elif report.concern_type == 'health' %}❤️
             {% else %}📌{% endif %}
-        </span>
-        <div class="alert-body">
-            <div class="alert-title">{{ report.reported_employee_name }}
-                <span class="badge badge-blue" style="font-size:.58rem;margin-left:.4rem">{{
-                    report.concern_type|replace('_', ' ')|title }}</span>
-            </div>
-            <div class="alert-msg">{{ report.description[:120] }}{% if report.description|length > 120 %}…{% endif %}
-            </div>
-            <div class="alert-time">Reported {{ report.timestamp }} · By {{ report.reporter_name }}</div>
         </div>
-        <span class="badge {% if report.status == 'pending' %}badge-amber{% else %}badge-green{% endif %}">{{
-            report.status }}</span>
+        <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem">
+                <span style="font-weight:700;font-size:.88rem;color:var(--ink)">{{ report.reported_employee_name
+                    }}</span>
+                <span class="badge badge-blue" style="font-size:.56rem">{{ report.concern_type|replace('_', ' ')|title
+                    }}</span>
+                <span style="font-size:.68rem;color:var(--muted);font-family:monospace">{{ report.reported_employee_id
+                    }}</span>
+            </div>
+            <div style="font-size:.78rem;color:var(--ink2);margin-bottom:.35rem">
+                {{ report.description[:150] }}{% if report.description|length > 150 %}…{% endif %}
+            </div>
+            <div style="font-size:.68rem;color:var(--muted);margin-bottom:.5rem">
+                Reported {{ report.timestamp }} · By {{ report.reporter_name }}
+            </div>
+
+            {% if report.status == 'pending' %}
+            <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+                <form method="POST" action="{{ url_for('hr_report_action') }}" style="display:inline;margin:0">
+                    <input type="hidden" name="report_id" value="{{ report.id }}">
+                    <input type="hidden" name="action_type" value="auto">
+                    <button type="submit" class="btn btn-sm"
+                        style="padding:.3rem .7rem;font-size:.68rem;background:var(--accent);border:none;color:#fff;border-radius:6px;cursor:pointer">
+                        ⚡ Take Action
+                    </button>
+                </form>
+                <a href="{{ url_for('hr_employee_detail', emp_id=report.reported_employee_id) }}"
+                    class="btn btn-outline btn-sm" style="padding:.3rem .7rem;font-size:.68rem">
+                    View Profile →
+                </a>
+            </div>
+            {% else %}
+            <div style="display:flex;align-items:center;gap:.4rem">
+                <span class="badge badge-green" style="font-size:.6rem">✅ Resolved</span>
+                {% if report.resolved_at %}
+                <span style="font-size:.62rem;color:var(--muted)">{{ report.resolved_at }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
     </div>
     {% endfor %}
 </div>

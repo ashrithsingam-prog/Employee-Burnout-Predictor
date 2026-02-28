@@ -570,6 +570,81 @@ def hr_action():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# HR ACTION ON PEER REPORT (quick action from dashboard)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/hr/report-action", methods=["POST"])
+@hr_required
+def hr_report_action():
+    """Take action on a peer report directly from the HR dashboard."""
+    report_id = request.form.get("report_id", "").strip()
+    action_type = request.form.get("action_type", "reduce_workload")
+
+    # Find the report
+    report = None
+    for r in DATA["peer_reports"]:
+        if r["id"] == report_id:
+            report = r
+            break
+
+    if not report:
+        flash("Report not found.", "error")
+        return redirect(url_for("hr_dashboard"))
+
+    emp_id = report["reported_employee_id"]
+    employee = DATA["employees"].get(emp_id)
+    if not employee:
+        flash("Reported employee not found.", "error")
+        return redirect(url_for("hr_dashboard"))
+
+    # Auto-generate action details based on concern type
+    concern = report.get("concern_type", "other")
+    details_map = {
+        "workload": f"Workload review initiated based on peer concern report. Will assess task distribution and redistribute if needed.",
+        "burnout": f"Wellness check-in scheduled based on peer concern report. Will monitor wellbeing and offer support resources.",
+        "behavior_change": f"1-on-1 meeting scheduled to check in based on observed behavioral changes reported by a peer.",
+        "health": f"Health and wellness support offered based on peer concern. Employee will be connected with available resources.",
+        "other": f"Follow-up initiated based on peer concern report. HR will reach out to assess the situation.",
+    }
+    action_type_map = {
+        "workload": "reduce_workload",
+        "burnout": "grant_leave",
+        "behavior_change": "schedule_1on1",
+        "health": "counseling_referral",
+        "other": "schedule_1on1",
+    }
+
+    final_action_type = action_type if action_type != "auto" else action_type_map.get(concern, "schedule_1on1")
+    details = details_map.get(concern, details_map["other"])
+
+    # Create HR action
+    action = {
+        "id": str(uuid.uuid4())[:8],
+        "employee_id": emp_id,
+        "employee_name": employee["name"],
+        "action_type": final_action_type,
+        "details": details,
+        "hr_manager_id": session.get("emp_id", ""),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "status": "active",
+        "source": "peer_report",
+        "report_id": report_id,
+    }
+
+    if emp_id not in DATA["hr_actions"]:
+        DATA["hr_actions"][emp_id] = []
+    DATA["hr_actions"][emp_id].append(action)
+
+    # Mark report as resolved
+    report["status"] = "resolved"
+    report["resolved_by"] = session.get("emp_id", "")
+    report["resolved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    flash(f"Action taken for {employee['name']}: {final_action_type.replace('_', ' ').title()}. Report marked as resolved.", "success")
+    return redirect(url_for("hr_dashboard"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # EMPLOYEE PROFILE
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -10,30 +10,30 @@
 
 <!-- KPIs -->
 <div class="kpi-grid">
-    <div class="kpi blue">
+    <a href="#employee-database" class="kpi blue" style="text-decoration:none;color:inherit;cursor:pointer">
         <div class="kpi-icon">👥</div>
         <div class="kpi-label">Total Employees</div>
         <div class="kpi-val">{{ total }}</div>
-        <div class="kpi-sub">Active in the system</div>
-    </div>
+        <div class="kpi-sub">Click to view all →</div>
+    </a>
     <div class="kpi green">
         <div class="kpi-icon">📊</div>
         <div class="kpi-label">Avg Burnout Score</div>
         <div class="kpi-val">{{ avg_score }}%</div>
         <div class="kpi-sub">Across all employees</div>
     </div>
-    <div class="kpi red">
+    <a href="{{ url_for('hr_dashboard', risk='high') }}" class="kpi red" style="text-decoration:none;color:inherit;cursor:pointer">
         <div class="kpi-icon">🔥</div>
         <div class="kpi-label">At Risk</div>
         <div class="kpi-val">{{ at_risk }}</div>
-        <div class="kpi-sub">Risky / Needs Help employees</div>
-    </div>
-    <div class="kpi purple">
+        <div class="kpi-sub">Click to filter →</div>
+    </a>
+    <a href="#peer-reports" class="kpi purple" style="text-decoration:none;color:inherit;cursor:pointer">
         <div class="kpi-icon">📩</div>
         <div class="kpi-label">Peer Reports</div>
         <div class="kpi-val">{{ peer_reports|length }}</div>
-        <div class="kpi-sub">Submitted concerns</div>
-    </div>
+        <div class="kpi-sub">Click to view →</div>
+    </a>
 </div>
 
 <!-- Risk Distribution with Doughnut Chart -->
@@ -138,7 +138,7 @@
 {% endif %}
 
 <!-- Search & Filter -->
-<div class="card">
+<div class="card" id="employee-database">
     <div class="card-header">👥 Employee Database</div>
 
     <form method="GET" action="{{ url_for('hr_dashboard') }}" class="search-form">
@@ -207,7 +207,7 @@
 
 <!-- Peer Reports with Actions -->
 {% if peer_reports %}
-<div class="card mt-3">
+<div class="card mt-3" id="peer-reports">
     <div class="card-header">📩 Peer Concern Reports
         <span class="badge badge-blue" style="margin-left:.5rem">{{ peer_reports|length }} report{{ 's' if
             peer_reports|length > 1 }}</span>

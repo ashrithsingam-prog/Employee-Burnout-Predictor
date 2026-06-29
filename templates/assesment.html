@@ -25,6 +25,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('assessment') }}">
+    <input type="hidden" name="response_times" id="response_times" value="{}">
     {% for q in questions %}
     <div class="question-card">
         <div class="question-num">{{ loop.index }}</div>
@@ -74,4 +75,27 @@
         <button type="submit" class="btn" style="padding:.9rem 3rem;font-size:.95rem">Submit Assessment →</button>
     </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let startTime = Date.now();
+    const responseTimes = {};
+    const hiddenInput = document.getElementById('response_times');
+    
+    const radioInputs = document.querySelectorAll('input[type="radio"]');
+    radioInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const qId = this.name;
+            if (!responseTimes[qId]) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                responseTimes[qId] = parseFloat(elapsed.toFixed(2));
+                startTime = Date.now();
+                hiddenInput.value = JSON.stringify(responseTimes);
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

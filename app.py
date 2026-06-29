@@ -220,8 +220,12 @@ def assessment():
     employee = DATA["employees"][emp_id]
 
     if request.method == "POST":
+        import json
         answers = {}
-        response_times = {}
+        try:
+            response_times = json.loads(request.form.get("response_times", "{}"))
+        except json.JSONDecodeError:
+            response_times = {}
 
         for q in ASSESSMENT_QUESTIONS:
             val = request.form.get(q["id"])

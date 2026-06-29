@@ -26,7 +26,7 @@
         <div class="kpi-icon">🔥</div>
         <div class="kpi-label">At Risk</div>
         <div class="kpi-val">{{ at_risk }}</div>
-        <div class="kpi-sub">High/Critical risk employees</div>
+        <div class="kpi-sub">Risky / Needs Help employees</div>
     </div>
     <div class="kpi purple">
         <div class="kpi-icon">📩</div>
@@ -36,24 +36,32 @@
     </div>
 </div>
 
-<!-- Risk Distribution -->
+<!-- Risk Distribution with Doughnut Chart -->
 <div class="card" style="margin-bottom:1.5rem">
     <div class="card-header">⚡ Risk Distribution</div>
-    <div class="grid-2" style="grid-template-columns:repeat(4,1fr)">
-        {% for level in ['low', 'moderate', 'high', 'critical'] %}
-        {% set item = risk_dist[level] %}
-        <div style="text-align:center;padding:.8rem">
-            <div
-                style="font-size:1.6rem;font-weight:800;
-                {% if level == 'low' %}color:var(--green){% elif level == 'moderate' %}color:var(--amber){% elif level == 'high' %}color:var(--red){% else %}color:var(--red){% endif %}">
-                {{ item.count }}
-            </div>
-            <div
-                style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:.2rem">
-                {{ level }}</div>
-            <div style="font-size:.72rem;color:var(--muted2)">{{ item.pct }}%</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center">
+        <!-- Doughnut Chart -->
+        <div style="position:relative;width:100%;max-width:240px;margin:0 auto">
+            <canvas id="riskDoughnutChart"></canvas>
         </div>
-        {% endfor %}
+        <!-- Stats -->
+        <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.8rem">
+            {% for level in ['low', 'moderate', 'high', 'critical'] %}
+            {% set item = risk_dist[level] %}
+            {% set label_map = {'low': 'Low', 'moderate': 'Moderate', 'high': 'Risky', 'critical': 'Needs Help'} %}
+            <div style="text-align:center;padding:.8rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+                <div
+                    style="font-size:1.6rem;font-weight:800;
+                    {% if level == 'low' %}color:var(--green){% elif level == 'moderate' %}color:var(--amber){% elif level == 'high' %}color:var(--red){% else %}color:#ef4444{% endif %}">
+                    {{ item.count }}
+                </div>
+                <div
+                    style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:.2rem">
+                    {{ label_map[level] }}</div>
+                <div style="font-size:.72rem;color:var(--muted2)">{{ item.pct }}%</div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </div>
 
@@ -140,8 +148,8 @@
             <option value="">All Risk Levels</option>
             <option value="low" {% if risk_filter=='low' %}selected{% endif %}>Low</option>
             <option value="moderate" {% if risk_filter=='moderate' %}selected{% endif %}>Moderate</option>
-            <option value="high" {% if risk_filter=='high' %}selected{% endif %}>High</option>
-            <option value="critical" {% if risk_filter=='critical' %}selected{% endif %}>Critical</option>
+            <option value="high" {% if risk_filter=='high' %}selected{% endif %}>Risky</option>
+            <option value="critical" {% if risk_filter=='critical' %}selected{% endif %}>Needs Help</option>
         </select>
         <button type="submit" class="btn btn-sm">Filter</button>
     </form>
@@ -161,6 +169,7 @@
                 </tr>
             </thead>
             <tbody>
+                {% set risk_label_map = {'low': 'LOW', 'moderate': 'MODERATE', 'high': 'RISKY', 'critical': 'NEEDS HELP'} %}
                 {% for emp in employees %}
                 <tr>
                     <td style="font-family:monospace;font-size:.78rem;color:var(--muted)">{{ emp.id }}</td>
@@ -169,17 +178,17 @@
                     <td>{{ emp.role }}</td>
                     <td>
                         <span style="font-weight:700;
-                            {% if emp.burnout_score < 30 %}color:var(--green)
-                            {% elif emp.burnout_score < 50 %}color:var(--amber)
-                            {% elif emp.burnout_score < 70 %}color:var(--red)
-                            {% else %}color:var(--red){% endif %}">
+                            {% if emp.burnout_score < 25 %}color:var(--green)
+                            {% elif emp.burnout_score < 60 %}color:var(--amber)
+                            {% elif emp.burnout_score < 80 %}color:var(--red)
+                            {% else %}color:#ef4444{% endif %}">
                             {{ emp.burnout_score }}%
                         </span>
                     </td>
                     <td>
                         <span
                             class="badge badge-{% if emp.risk_level == 'low' %}green{% elif emp.risk_level == 'moderate' %}amber{% elif emp.risk_level == 'high' %}red{% else %}red{% endif %}">
-                            {{ emp.risk_level|upper }}
+                            {{ risk_label_map.get(emp.risk_level, emp.risk_level|upper) }}
                         </span>
                     </td>
                     <td style="font-size:.78rem;color:var(--muted)">{{ emp.last_assessment or 'Never' }}</td>
@@ -262,4 +271,83 @@
     {% endfor %}
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const ctx = document.getElementById('riskDoughnutChart');
+    if (!ctx) return;
+
+    const data = {
+        labels: ['Low', 'Moderate', 'Risky', 'Needs Help'],
+        datasets: [{
+            data: [
+                {{ risk_dist.low.count }},
+                {{ risk_dist.moderate.count }},
+                {{ risk_dist.high.count }},
+                {{ risk_dist.critical.count }}
+            ],
+            backgroundColor: [
+                'rgba(52, 211, 153, 0.85)',
+                'rgba(251, 191, 36, 0.85)',
+                'rgba(248, 113, 113, 0.85)',
+                'rgba(239, 68, 68, 1)',
+            ],
+            borderColor: [
+                'rgba(52, 211, 153, 1)',
+                'rgba(251, 191, 36, 1)',
+                'rgba(248, 113, 113, 1)',
+                'rgba(239, 68, 68, 1)',
+            ],
+            borderWidth: 2,
+            hoverOffset: 8,
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: data,
+        options: {
+            responsive: true,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#c4cad8',
+                        font: { family: 'Outfit', size: 11, weight: '500' },
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1c1f2e',
+                    titleColor: '#e8ecf4',
+                    bodyColor: '#c4cad8',
+                    borderColor: '#2e3348',
+                    borderWidth: 1,
+                    cornerRadius: 10,
+                    titleFont: { family: 'Outfit', weight: '600' },
+                    bodyFont: { family: 'Outfit' },
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                            return context.label + ': ' + context.parsed + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                duration: 1200,
+                easing: 'easeOutQuart',
+            }
+        }
+    });
+})();
+</script>
 {% endblock %}

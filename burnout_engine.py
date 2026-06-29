@@ -21,12 +21,12 @@ WEIGHTS = {
     "productivity": 0.10, # Task completion trends
 }
 
-# Thresholds
+# Thresholds (lower bound for each level)
 RISK_THRESHOLDS = {
-    "low": 35,
-    "moderate": 55,
-    "high": 75,
-    "critical": 90,
+    "low": 25,        # Below 25% = Low
+    "moderate": 25,   # 25% - 60% = Moderate
+    "high": 60,       # 60% - 80% = Risky
+    "critical": 80,   # 80%+ = Needs Help
 }
 
 

@@ -20,7 +20,7 @@
         class="kpi {% if burnout.risk_level == 'low' %}green{% elif burnout.risk_level == 'moderate' %}amber{% elif burnout.risk_level == 'high' %}red{% else %}red{% endif %}">
         <div class="kpi-icon">⚡</div>
         <div class="kpi-label">Risk Level</div>
-        <div class="kpi-val">{{ burnout.risk_level|upper }}</div>
+        <div class="kpi-val">{% if burnout.risk_level == 'high' %}RISKY{% elif burnout.risk_level == 'critical' %}NEEDS HELP{% else %}{{ burnout.risk_level|upper }}{% endif %}</div>
         <div class="kpi-sub">Current risk assessment</div>
     </div>
     <div class="kpi blue">
@@ -141,7 +141,7 @@
         <div class="profile-stat"><span>Risk Level</span>
             <span
                 class="badge badge-{% if burnout.risk_level == 'low' %}green{% elif burnout.risk_level == 'moderate' %}amber{% elif burnout.risk_level == 'high' %}red{% else %}red{% endif %}">
-                {{ burnout.risk_level|upper }}
+                {% if burnout.risk_level == 'high' %}RISKY{% elif burnout.risk_level == 'critical' %}NEEDS HELP{% else %}{{ burnout.risk_level|upper }}{% endif %}
             </span>
         </div>
     </div>
@@ -254,6 +254,128 @@
         <a href="{{ url_for('peer_report') }}" class="btn btn-outline btn-sm">Submit Report →</a>
     </div>
 </div>
+
+<!-- Wellness Trends Chart -->
+{% if work_logs|length > 1 %}
+<div class="card mt-3">
+    <div class="card-header">📈 Wellness Trends — Last {{ work_logs|length }} Weeks</div>
+    <p style="font-size:.78rem;margin-bottom:1rem;color:var(--muted2)">Visual trends of your work patterns over the recent weeks. Rising lines may indicate increasing burnout risk.</p>
+    <div style="position:relative;width:100%;height:280px">
+        <canvas id="wellnessTrendsChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
 </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if work_logs|length > 1 %}
+<script>
+(function() {
+    const ctx = document.getElementById('wellnessTrendsChart');
+    if (!ctx) return;
+
+    const labels = [{% for log in work_logs %}'{{ log.week_start }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    const dailyHours = [{% for log in work_logs %}{{ log.avg_daily_hours }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const weekendHours = [{% for log in work_logs %}{{ log.weekend_hours }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const lateNights = [{% for log in work_logs %}{{ log.late_night_sessions }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const tasksCompleted = [{% for log in work_logs %}{{ log.tasks_completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Avg Daily Hours',
+                    data: dailyHours,
+                    borderColor: '#f87171',
+                    backgroundColor: 'rgba(248,113,113,0.1)',
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#f87171',
+                },
+                {
+                    label: 'Weekend Hours',
+                    data: weekendHours,
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251,191,36,0.08)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fbbf24',
+                },
+                {
+                    label: 'Late Night Sessions',
+                    data: lateNights,
+                    borderColor: '#a78bfa',
+                    backgroundColor: 'rgba(167,139,250,0.08)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#a78bfa',
+                },
+                {
+                    label: 'Tasks Completed',
+                    data: tasksCompleted,
+                    borderColor: '#34d399',
+                    backgroundColor: 'rgba(52,211,153,0.08)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#34d399',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#c4cad8',
+                        font: { family: 'Outfit', size: 11 },
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1c1f2e',
+                    titleColor: '#e8ecf4',
+                    bodyColor: '#c4cad8',
+                    borderColor: '#2e3348',
+                    borderWidth: 1,
+                    cornerRadius: 10,
+                    titleFont: { family: 'Outfit', weight: '600' },
+                    bodyFont: { family: 'Outfit' },
+                    padding: 12,
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#7a849e', font: { family: 'Outfit', size: 10 } },
+                    grid: { color: 'rgba(46,51,72,0.5)' },
+                    border: { color: '#2e3348' }
+                },
+                y: {
+                    ticks: { color: '#7a849e', font: { family: 'Outfit', size: 10 } },
+                    grid: { color: 'rgba(46,51,72,0.3)' },
+                    border: { color: '#2e3348' },
+                    beginAtZero: true,
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

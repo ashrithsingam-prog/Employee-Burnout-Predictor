@@ -29,7 +29,7 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static"),
     template_folder=os.path.join(BASE_DIR, "templates"),
 )
-app.secret_key = "burnshield-secret-key-2026"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "burnshield-dev-key-change-in-production")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # In-Memory Data Store (loaded from mock_data on startup)
@@ -830,11 +830,14 @@ def serve_css():
 
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5050))
+    debug = os.environ.get("FLASK_ENV", "development") == "development"
     print("\n" + "=" * 60)
     print("  BurnShield -- Employee Burnout Prediction & Monitoring")
     print("=" * 60)
     print(f"  Loaded {len(DATA['employees'])} employees")
     print(f"  Static folder: {app.static_folder}")
-    print(f"  Server starting at http://localhost:5050")
+    print(f"  Server starting at http://localhost:{port}")
+    print(f"  Debug mode: {debug}")
     print("=" * 60 + "\n")
-    app.run(debug=True, port=5050)
+    app.run(host="0.0.0.0", port=port, debug=debug)

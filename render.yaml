@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: burnshield
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python -m textblob.download_corpora
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.11.0"

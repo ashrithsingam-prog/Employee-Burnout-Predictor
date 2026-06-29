@@ -1,6 +1,7 @@
 services:
   - type: web
     name: burnshield
+    region: singapore
     runtime: python
     buildCommand: pip install -r requirements.txt && python -m textblob.download_corpora
     startCommand: gunicorn app:app

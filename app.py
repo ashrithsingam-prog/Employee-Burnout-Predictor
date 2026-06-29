@@ -14,7 +14,8 @@ from datetime import datetime
 import uuid
 import os
 
-from mock_data import MOCK_DATA, ASSESSMENT_QUESTIONS, generate_assessment_answers
+from mock_data import ASSESSMENT_QUESTIONS
+from models import db, Employee, WorkLog, Message, Assessment, HRAction, PeerReport
 from burnout_engine import (
     compute_burnout_score,
     analyze_messages,
@@ -30,20 +31,11 @@ app = Flask(
     template_folder=os.path.join(BASE_DIR, "templates"),
 )
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "burnshield-dev-key-change-in-production")
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///burnshield.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# ─────────────────────────────────────────────────────────────────────────────
-# In-Memory Data Store (loaded from mock_data on startup)
-# ─────────────────────────────────────────────────────────────────────────────
+db.init_app(app)
 
-DATA = {
-    "employees": {e["id"]: e for e in MOCK_DATA["employees"]},
-    "work_logs": MOCK_DATA["work_logs"],
-    "messages": MOCK_DATA["messages"],
-    "assessments": MOCK_DATA["assessments"],
-    "hr_actions": {},     # employee_id -> list of HR actions
-    "peer_reports": [],   # list of peer concern reports
-    "sessions": {},       # simple session store: emp_id -> login timestamp
-}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -54,7 +46,11 @@ DATA = {
 def inject_session_globals():
     """Make session data available in all templates."""
     emp_id = session.get("emp_id")
-    current_employee = DATA["employees"].get(emp_id) if emp_id else None
+    current_employee = None
+    if emp_id:
+        emp = db.session.get(Employee, emp_id)
+        if emp:
+            current_employee = emp.to_dict()
     return {
         "session": session,
         "current_employee": current_employee,
@@ -92,23 +88,23 @@ def hr_required(f):
 
 def get_employee_burnout(emp_id):
     """Compute full burnout analysis for one employee."""
-    assessments = DATA["assessments"].get(emp_id, [])
-    work_logs = DATA["work_logs"].get(emp_id, [])
-    messages = DATA["messages"].get(emp_id, [])
+    assessments = [a.to_dict() for a in Assessment.query.filter_by(employee_id=emp_id).all()]
+    work_logs = [w.to_dict() for w in WorkLog.query.filter_by(employee_id=emp_id).all()]
+    messages = [m.to_dict() for m in Message.query.filter_by(employee_id=emp_id).all()]
     return compute_burnout_score(emp_id, assessments, work_logs, messages)
 
 
-def employee_summary(emp):
+def employee_summary(emp_dict):
     """Return a safely serializable summary of an employee (no hidden fields)."""
-    burnout = get_employee_burnout(emp["id"])
+    burnout = get_employee_burnout(emp_dict["id"])
     return {
-        "id": emp["id"],
-        "name": emp["name"],
-        "email": emp["email"],
-        "department": emp["department"],
-        "role": emp["role"],
-        "join_date": emp["join_date"],
-        "is_hr": emp.get("is_hr", False),
+        "id": emp_dict["id"],
+        "name": emp_dict["name"],
+        "email": emp_dict["email"],
+        "department": emp_dict["department"],
+        "role": emp_dict["role"],
+        "join_date": emp_dict["join_date"],
+        "is_hr": emp_dict.get("is_hr", False),
         "burnout_score": burnout["adjusted_score"],
         "risk_level": burnout["risk_level"],
         "last_assessment": burnout["last_assessment_date"],
@@ -143,15 +139,19 @@ def login():
         if not emp_id:
             return render_template("login.html", error="Please enter your Employee ID.")
 
-        employee = DATA["employees"].get(emp_id)
-        if not employee:
+        emp = db.session.get(Employee, emp_id)
+        if not emp:
             return render_template("login.html", error=f"Employee {emp_id} not found.")
+        
+        employee = emp.to_dict()
 
         # Store in session
         session["emp_id"] = emp_id
         session["is_hr"] = employee.get("is_hr", False)
         session["is_manager"] = employee.get("is_manager", False)
-        DATA["sessions"][emp_id] = datetime.now().isoformat()
+        
+        emp.last_login = datetime.now().isoformat()
+        db.session.commit()
 
         if employee.get("is_hr"):
             return redirect(url_for("hr_dashboard"))
@@ -176,23 +176,24 @@ def logout():
 def dashboard():
     """Employee's personal wellbeing dashboard."""
     emp_id = session["emp_id"]
-    employee = DATA["employees"][emp_id]
+    emp = db.session.get(Employee, emp_id)
+    employee = emp.to_dict()
     burnout = get_employee_burnout(emp_id)
-    assessments = DATA["assessments"].get(emp_id, [])
-    work_logs = DATA["work_logs"].get(emp_id, [])[-4:]  # Last 4 weeks
-    hr_actions = DATA["hr_actions"].get(emp_id, [])  # HR actions for this employee
+    assessments = [a.to_dict() for a in Assessment.query.filter_by(employee_id=emp_id).all()]
+    work_logs = [w.to_dict() for w in WorkLog.query.filter_by(employee_id=emp_id).order_by(WorkLog.id.desc()).limit(4).all()][::-1]  # Last 4 weeks
+    hr_actions = [h.to_dict() for h in HRAction.query.filter_by(employee_id=emp_id).all()]
 
-    # If logged-in user is a manager, gather HR actions for their team
     team_actions = []
     if employee.get("is_manager"):
-        for eid, emp_data in DATA["employees"].items():
-            if emp_data.get("manager") == emp_id and eid != emp_id:
-                actions = DATA["hr_actions"].get(eid, [])
+        team = Employee.query.filter_by(manager=emp_id).all()
+        for t_emp in team:
+            if t_emp.id != emp_id:
+                actions = HRAction.query.filter_by(employee_id=t_emp.id).all()
                 for action in actions:
                     team_actions.append({
-                        "employee_name": emp_data["name"],
-                        "employee_id": eid,
-                        "action": action,
+                        "employee_name": t_emp.name,
+                        "employee_id": t_emp.id,
+                        "action": action.to_dict(),
                     })
         team_actions.sort(key=lambda x: x["action"].get("timestamp", ""), reverse=True)
 
@@ -217,7 +218,8 @@ def dashboard():
 def assessment():
     """Burnout assessment form and submission."""
     emp_id = session["emp_id"]
-    employee = DATA["employees"][emp_id]
+    emp = db.session.get(Employee, emp_id)
+    employee = emp.to_dict()
 
     if request.method == "POST":
         import json
@@ -249,9 +251,16 @@ def assessment():
         }
 
         # Store
-        if emp_id not in DATA["assessments"]:
-            DATA["assessments"][emp_id] = []
-        DATA["assessments"][emp_id].append(assessment_record)
+        a = Assessment(
+            id=assessment_record["id"],
+            employee_id=assessment_record["employee_id"],
+            timestamp=assessment_record["timestamp"],
+            answers=assessment_record["answers"],
+            response_times=assessment_record["response_times"],
+            is_fake_attempt=assessment_record["is_fake_attempt"]
+        )
+        db.session.add(a)
+        db.session.commit()
 
         # Compute updated burnout
         burnout = get_employee_burnout(emp_id)
@@ -281,13 +290,14 @@ def assessment():
 def peer_report():
     """Submit a concern about a colleague."""
     emp_id = session["emp_id"]
-    employee = DATA["employees"][emp_id]
+    emp = db.session.get(Employee, emp_id)
+    employee = emp.to_dict()
 
-    # Get list of all employees except self for the dropdown
+    all_emps = Employee.query.all()
     colleagues = [
-        {"id": e["id"], "name": e["name"], "department": e["department"]}
-        for e in DATA["employees"].values()
-        if e["id"] != emp_id
+        {"id": e.id, "name": e.name, "department": e.department}
+        for e in all_emps
+        if e.id != emp_id
     ]
     colleagues.sort(key=lambda x: x["name"])
 
@@ -305,13 +315,14 @@ def peer_report():
                 active_page="peer_report",
             )
 
-        reported = DATA["employees"].get(reported_id)
-        if not reported:
+        r_emp = db.session.get(Employee, reported_id)
+        if not r_emp:
             return render_template(
                 "peer_report.html", colleagues=colleagues,
                 error="Selected colleague not found.", success=False,
                 active_page="peer_report",
             )
+        reported = r_emp.to_dict()
 
         if not description:
             return render_template(
@@ -337,7 +348,19 @@ def peer_report():
             "status": "pending",
             "anonymous": anonymous,
         }
-        DATA["peer_reports"].append(report)
+        pr = PeerReport(
+            id=report["id"],
+            reporter_id=report["reporter_id"] if report["reporter_id"] != "anonymous" else None,
+            reporter_name=report["reporter_name"] if report["reporter_name"] != "Anonymous" else None,
+            reported_employee_id=report["reported_employee_id"],
+            reported_employee_name=report["reported_employee_name"],
+            concern_type=report["concern_type"],
+            description=report["description"],
+            timestamp=report["timestamp"],
+            status=report["status"]
+        )
+        db.session.add(pr)
+        db.session.commit()
 
         return render_template(
             "peer_report.html", colleagues=colleagues,
@@ -368,7 +391,9 @@ def hr_dashboard():
     risk_counts = {"low": 0, "moderate": 0, "high": 0, "critical": 0}
     total_score = 0
 
-    for emp in DATA["employees"].values():
+    all_emps = Employee.query.all()
+    for emp_model in all_emps:
+        emp = emp_model.to_dict()
         summary = employee_summary(emp)
         risk_counts[summary["risk_level"]] = risk_counts.get(summary["risk_level"], 0) + 1
         total_score += summary["burnout_score"]
@@ -388,7 +413,7 @@ def hr_dashboard():
 
     employees.sort(key=lambda x: x["burnout_score"], reverse=True)
 
-    total = len(DATA["employees"])
+    total = Employee.query.count()
     avg_score = round(total_score / total, 1) if total > 0 else 0
     at_risk = risk_counts.get("high", 0) + risk_counts.get("critical", 0)
 
@@ -402,11 +427,12 @@ def hr_dashboard():
         }
 
     # Get peer reports
-    peer_reports = sorted(DATA["peer_reports"], key=lambda x: x["timestamp"], reverse=True)
+    peer_reports = [p.to_dict() for p in PeerReport.query.order_by(PeerReport.timestamp.desc()).all()]
 
     # ── Manager Blindspot Analysis ──────────────────────────────────────
     manager_teams = {}  # manager_id -> list of {name, score, risk_level}
-    for emp in DATA["employees"].values():
+    for emp_model in Employee.query.all():
+        emp = emp_model.to_dict()
         if emp.get("is_hr"):
             continue  # Skip HR managers themselves
         mgr_id = emp.get("manager", "Unknown")
@@ -470,10 +496,11 @@ def hr_dashboard():
 def hr_employee_detail(emp_id):
     """HR detailed view of a single employee."""
     emp_id = emp_id.upper()
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
+    emp = db.session.get(Employee, emp_id)
+    if not emp:
         flash("Employee not found.", "error")
         return redirect(url_for("hr_dashboard"))
+    employee = emp.to_dict()
 
     burnout = get_employee_burnout(emp_id)
 
@@ -485,9 +512,9 @@ def hr_employee_detail(emp_id):
         sa["neutral_pct"] = round(sa.get("neutral_count", 0) / total_msgs * 100, 1)
         sa["negative_pct"] = round(sa.get("negative_count", 0) / total_msgs * 100, 1)
 
-    actions = DATA["hr_actions"].get(emp_id, [])
-    peer_reports = [r for r in DATA["peer_reports"] if r["reported_employee_id"] == emp_id]
-    work_logs = DATA["work_logs"].get(emp_id, [])[-4:]  # Last 4 weeks
+    actions = [a.to_dict() for a in HRAction.query.filter_by(employee_id=emp_id).all()]
+    peer_reports = [p.to_dict() for p in PeerReport.query.filter_by(reported_employee_id=emp_id).all()]
+    work_logs = [w.to_dict() for w in WorkLog.query.filter_by(employee_id=emp_id).order_by(WorkLog.id.desc()).limit(4).all()][::-1]
 
     # Generate Safe Icebreakers (Ghostwritten Empathy)
     icebreakers = []
@@ -545,10 +572,11 @@ def hr_action():
     action_type = request.form.get("action_type", "")
     details = request.form.get("details", "").strip()
 
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
+    emp = db.session.get(Employee, emp_id)
+    if not emp:
         flash("Employee not found.", "error")
         return redirect(url_for("hr_dashboard"))
+    employee = emp.to_dict()
 
     if not details:
         flash("Please provide action details.", "error")
@@ -565,9 +593,16 @@ def hr_action():
         "status": "active",
     }
 
-    if emp_id not in DATA["hr_actions"]:
-        DATA["hr_actions"][emp_id] = []
-    DATA["hr_actions"][emp_id].append(action)
+    hr_a = HRAction(
+        id=action["id"],
+        employee_id=action["employee_id"],
+        action_type=action["action_type"],
+        details=action["details"],
+        timestamp=action["timestamp"],
+        status=action["status"]
+    )
+    db.session.add(hr_a)
+    db.session.commit()
 
     flash(f"Action '{action_type.replace('_', ' ').title()}' recorded for {employee['name']}.", "success")
     return redirect(url_for("hr_employee_detail", emp_id=emp_id))
@@ -585,21 +620,18 @@ def hr_report_action():
     action_type = request.form.get("action_type", "reduce_workload")
 
     # Find the report
-    report = None
-    for r in DATA["peer_reports"]:
-        if r["id"] == report_id:
-            report = r
-            break
-
-    if not report:
+    report_model = db.session.get(PeerReport, report_id)
+    if not report_model:
         flash("Report not found.", "error")
         return redirect(url_for("hr_dashboard"))
+    report = report_model.to_dict()
 
     emp_id = report["reported_employee_id"]
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
+    emp = db.session.get(Employee, emp_id)
+    if not emp:
         flash("Reported employee not found.", "error")
         return redirect(url_for("hr_dashboard"))
+    employee = emp.to_dict()
 
     # Auto-generate action details based on concern type
     concern = report.get("concern_type", "other")
@@ -635,9 +667,16 @@ def hr_report_action():
         "report_id": report_id,
     }
 
-    if emp_id not in DATA["hr_actions"]:
-        DATA["hr_actions"][emp_id] = []
-    DATA["hr_actions"][emp_id].append(action)
+    hr_a = HRAction(
+        id=action["id"],
+        employee_id=action["employee_id"],
+        action_type=action["action_type"],
+        details=action["details"],
+        timestamp=action["timestamp"],
+        status=action["status"]
+    )
+    db.session.add(hr_a)
+    db.session.commit()
 
     # Mark report as resolved
     report["status"] = "resolved"
@@ -657,8 +696,8 @@ def hr_report_action():
 def profile():
     """Employee profile and settings page."""
     emp_id = session["emp_id"]
-    # Get the latest data from DATA structure (already injected by context processor, but good to be explicit for route logic)
-    employee = DATA["employees"].get(emp_id)
+    emp = db.session.get(Employee, emp_id)
+    employee = emp.to_dict() if emp else None
     
     return render_template(
         "profile.html",
@@ -678,9 +717,10 @@ def api_list_employees():
     risk_level = request.args.get("risk_level")
 
     employees = []
-    for emp in DATA["employees"].values():
-        summary = employee_summary(emp)
-        if department and emp["department"] != department:
+    for emp_model in Employee.query.all():
+        emp_dict = emp_model.to_dict()
+        summary = employee_summary(emp_dict)
+        if department and emp_dict["department"] != department:
             continue
         if risk_level and summary["risk_level"] != risk_level:
             continue
@@ -694,13 +734,14 @@ def api_list_employees():
 def api_get_employee(emp_id):
     """Get detailed burnout analysis for a single employee."""
     emp_id = emp_id.upper()
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
+    emp = db.session.get(Employee, emp_id)
+    if not emp:
         return jsonify({"error": "Employee not found"}), 404
+    employee = emp.to_dict()
 
     burnout = get_employee_burnout(emp_id)
-    hr_actions = DATA["hr_actions"].get(emp_id, [])
-    peer_reports = [r for r in DATA["peer_reports"] if r["reported_employee_id"] == emp_id]
+    hr_actions = [h.to_dict() for h in HRAction.query.filter_by(employee_id=emp_id).all()]
+    peer_reports = [p.to_dict() for p in PeerReport.query.filter_by(reported_employee_id=emp_id).all()]
 
     return jsonify({
         "employee": {
@@ -737,9 +778,10 @@ def api_submit_assessment():
 
     if not emp_id:
         return jsonify({"error": "Employee ID is required"}), 400
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
+    emp = db.session.get(Employee, emp_id)
+    if not emp:
         return jsonify({"error": "Employee not found"}), 404
+    employee = emp.to_dict()
     if not answers:
         return jsonify({"error": "Answers are required"}), 400
 
@@ -762,9 +804,16 @@ def api_submit_assessment():
         "is_fake_attempt": False,
     }
 
-    if emp_id not in DATA["assessments"]:
-        DATA["assessments"][emp_id] = []
-    DATA["assessments"][emp_id].append(assessment_record)
+    a = Assessment(
+        id=assessment_record["id"],
+        employee_id=assessment_record["employee_id"],
+        timestamp=assessment_record["timestamp"],
+        answers=assessment_record["answers"],
+        response_times=assessment_record["response_times"],
+        is_fake_attempt=assessment_record["is_fake_attempt"]
+    )
+    db.session.add(a)
+    db.session.commit()
 
     burnout = get_employee_burnout(emp_id)
     alerts = generate_alerts(employee, burnout)
@@ -785,10 +834,11 @@ def api_submit_assessment():
 def api_get_sentiment(emp_id):
     """Get sentiment analysis of an employee's communications."""
     emp_id = emp_id.upper()
-    employee = DATA["employees"].get(emp_id)
-    if not employee:
+    emp = db.session.get(Employee, emp_id)
+    if not emp:
         return jsonify({"error": "Employee not found"}), 404
-    messages = DATA["messages"].get(emp_id, [])
+    employee = emp.to_dict()
+    messages = [m.to_dict() for m in Message.query.filter_by(employee_id=emp_id).all()]
     analysis = analyze_messages(messages)
     return jsonify({"employee_id": emp_id, "employee_name": employee["name"], "analysis": analysis})
 
@@ -797,7 +847,8 @@ def api_get_sentiment(emp_id):
 def api_get_alerts():
     """Get all HR alerts for employees at risk."""
     all_alerts = []
-    for emp in DATA["employees"].values():
+    for emp_model in Employee.query.all():
+        emp = emp_model.to_dict()
         burnout = get_employee_burnout(emp["id"])
         emp_alerts = generate_alerts(emp, burnout)
         for alert in emp_alerts:
@@ -815,7 +866,7 @@ def api_get_alerts():
 @app.route("/api/departments", methods=["GET"])
 def api_get_departments():
     """Get list of all departments."""
-    departments = set(emp["department"] for emp in DATA["employees"].values())
+    departments = set(e.department for e in Employee.query.all())
     return jsonify({"departments": sorted(departments)})
 
 
@@ -839,7 +890,9 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("  BurnShield -- Employee Burnout Prediction & Monitoring")
     print("=" * 60)
-    print(f"  Loaded {len(DATA['employees'])} employees")
+    with app.app_context():
+        emp_count = Employee.query.count()
+    print(f"  Loaded {emp_count} employees from SQLite Database")
     print(f"  Static folder: {app.static_folder}")
     print(f"  Server starting at http://localhost:{port}")
     print(f"  Debug mode: {debug}")

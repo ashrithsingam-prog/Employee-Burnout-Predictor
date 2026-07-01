@@ -198,7 +198,7 @@ def compute_work_pattern_score(work_logs):
     avg_weekend_hours = sum(l["weekend_hours"] for l in recent_logs) / len(recent_logs)
     avg_late_nights = sum(l["late_night_sessions"] for l in recent_logs) / len(recent_logs)
     avg_breaks = sum(l["breaks_taken_per_day"] for l in recent_logs) / len(recent_logs)
-    avg_pto_balance = sum(l["pto_balance_days"] for l in recent_logs) / len(recent_logs)
+    avg_pto_balance = sum(l.get("pto_balance_days", 0) for l in recent_logs) / len(recent_logs)
 
     score = 0
 
